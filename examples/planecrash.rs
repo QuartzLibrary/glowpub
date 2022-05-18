@@ -3,7 +3,7 @@ use std::{collections::BTreeSet, path::PathBuf};
 
 use glowfic_to_epub::Thread;
 
-pub const IDS: [u64; 10] = [4503, 4582, 5504, 5506, 5508, 5694, 5775, 5778, 5880, 5930];
+pub const IDS: [u64; 9] = [4582, 5504, 5506, 5508, 5694, 5775, 5778, 5880, 5930];
 
 /// Download and process a all glowfic posts in the planecrash series.
 #[derive(Parser, Debug)]
