@@ -1,0 +1,28 @@
+[package]
+name = "glowfic_to_epub"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.11", features = ["json"] }
+mime = "0.3"
+tokio = { version = "1", features = ["full"] }
+epub-builder = "0.5"
+glob = "0.3"
+regex = "1"
+ammonia = "3"
+
+textwrap = "0.15"
+resvg = "0.22.0"
+usvg = { version = "0.22", features = ["text"] }
+tiny-skia = "0.6.3"
+fontdb = "0.9"
+
+[dev-dependencies]
+rand = "0.8"
+clap = { version = "3.1.18", features = ["derive"] }
+
+[patch.crates-io]
+epub-builder = { git = "https://github.com/lise-henry/epub-builder" }

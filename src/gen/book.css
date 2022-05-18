@@ -1,0 +1,40 @@
+.title-page {
+    margin: 5em;
+    text-align: center;
+}
+
+.copyright-page {
+    margin: 5em;
+    text-align: center;
+}
+
+.description {
+    font-style: italic;
+    text-align: center;
+}
+
+.content {
+    margin: auto;
+    max-width: 40em;
+}
+
+
+.content-block {
+    display: inline-block;
+    width: 100%;
+}
+
+.character {
+    float: right;
+    margin: 0.5em;
+    text-align: center;
+    background-color: rgba(133, 133, 133, 0.3);
+}
+
+.character>img.icon {
+    max-width: 10em;
+}
+
+.icon-caption {
+    display: block;
+}
