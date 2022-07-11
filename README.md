@@ -4,7 +4,7 @@ Using this software requires [Rust](https://www.rust-lang.org/tools/install).
 
 ---
 
-To process a specific post:
+To process a specific post, clone this repo and, from its directory:
 ```
 cargo run --example process <post-id>
 ```
