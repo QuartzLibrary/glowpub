@@ -15,14 +15,14 @@ regex = "1"
 ammonia = "3"
 
 textwrap = "0.15"
-resvg = "0.22.0"
-usvg = { version = "0.22", features = ["text"] }
-tiny-skia = "0.6.3"
+resvg = "0.23"
+usvg = { version = "0.23", features = ["text"] }
+tiny-skia = "0.6" # TODO: Bump after `resvg` does
 fontdb = "0.9"
 
 [dev-dependencies]
 rand = "0.8"
-clap = { version = "3.1.18", features = ["derive"] }
+clap = { version = "3.1", features = ["derive"] }
 
 [patch.crates-io]
 epub-builder = { git = "https://github.com/lise-henry/epub-builder" }
