@@ -3,7 +3,29 @@ use std::{collections::BTreeSet, path::PathBuf};
 
 use glowfic_to_epub::Thread;
 
-pub const IDS: [u64; 9] = [4582, 5504, 5506, 5508, 5694, 5775, 5778, 5880, 5930];
+pub const IDS: [&[u64]; 2] = [&MAIN, &SANDBOXES];
+
+/// Main planescrash section
+pub const MAIN: [u64; 10] = [
+    4582, // mad investor chaos and the woman of asmodeus
+    5504, // some human relationships are less universal than others
+    5506, // take this report back and bring her a better report
+    5508, // project lawful and their oblivious boyfriend
+    5694, // my fun research project has more existential risk than I anticipated
+    5930, // what the truth can destroy
+    5977, // crisis of faith
+    6075, // the woman of irori
+    6131, // flashback: this is not a threat
+    6132, // null action
+];
+
+/// planecrash sandboxes
+pub const SANDBOXES: [u64; 4] = [
+    5775, // totally not evil
+    5778, // welcome to project lawful
+    5880, // I reject your alternate reality and substitute my own
+    6124, // dear abrogail
+];
 
 /// Download and process a all glowfic posts in the planecrash series.
 #[derive(Parser, Debug)]
@@ -19,7 +41,7 @@ async fn main() {
 
     let mut threads = vec![];
 
-    for id in IDS {
+    for id in IDS.into_iter().flatten().copied() {
         println!("Downloading post {id}");
 
         let thread = Thread::get_cached(id, !use_cache).await.unwrap().unwrap();

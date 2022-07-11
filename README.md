@@ -4,7 +4,7 @@ Using this software requires [Rust](https://www.rust-lang.org/tools/install).
 
 ---
 
-To process a specific post, clone this repo and, from its directory:
+To process a specific post clone this repo and, from its directory, run:
 ```
 cargo run --example process <post-id>
 ```
@@ -18,3 +18,4 @@ To process the entire `planecrash` series:
 ```
 cargo run --example planecrash
 ```
+(`planecrash` posts updated on 2022-07-11 from [here](https://glowfic.com/boards/215))
