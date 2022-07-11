@@ -3,7 +3,17 @@ use std::{collections::BTreeSet, path::PathBuf};
 
 use glowfic_to_epub::Thread;
 
-pub const IDS: [u64; 9] = [4582, 5504, 5506, 5508, 5694, 5775, 5778, 5880, 5930];
+pub const IDS: [u64; 9] = [
+    4582, // mad investor chaos and the woman of asmodeus
+    5504, // some human relationships are less universal than others
+    5506, // take this report back and bring her a better report
+    5508, // project lawful and their oblivious boyfriend
+    5694, // my fun research project has more existential risk than I anticipated
+    5775, // totally not evil
+    5778, // welcome to project lawful
+    5880, // I reject your alternate reality and substitute my own
+    5930, // what the truth can destroy
+];
 
 /// Download and process a all glowfic posts in the planecrash series.
 #[derive(Parser, Debug)]
