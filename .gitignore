@@ -2,3 +2,10 @@
 /books
 /cache
 /tests/fixtures
+
+# Vim
+[._]*.sw[a-p]
+*~
+
+# helps ripgrep not be silly
+.git

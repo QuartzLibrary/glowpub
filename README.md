@@ -19,3 +19,10 @@ To process the entire `planecrash` series:
 cargo run --example planecrash
 ```
 (`planecrash` posts updated on 2022-07-11 from [here](https://glowfic.com/boards/215))
+
+---
+
+To re-use already cached items, add `-- --use-cache` to the end of the command.
+
+To change the output in a way that may be more comfortable for text-to-speech, add `-- --for-tts` to the end of the command.
+

@@ -78,24 +78,25 @@ pub fn raw_content_page(content_blocks: &[String]) -> String {
 }
 
 impl Thread {
-    fn content_blocks(&self) -> Vec<String> {
+    fn content_blocks(&self, for_tts: bool) -> Vec<String> {
         std::iter::once(self.post.content_block())
-            .chain(self.replies.iter().map(|reply| reply.content_block()))
+            .chain(self.replies.iter().map(|reply| reply.content_block(for_tts)))
             .collect()
     }
 }
 impl Post {
     fn content_block(&self) -> String {
-        content_block(&None, &self.character, &self.icon, &self.content)
+        content_block(&None, &self.character, &self.icon, &self.content, false)
     }
 }
 impl Reply {
-    fn content_block(&self) -> String {
+    fn content_block(&self, for_tts: bool) -> String {
         content_block(
             &Some(self.user.clone()),
             &self.character,
             &self.icon,
             &self.content,
+            for_tts
         )
     }
 }
@@ -105,6 +106,7 @@ fn content_block(
     character: &Option<Character>,
     icon: &Option<Icon>,
     content: &str,
+    for_tts: bool,
 ) -> String {
     let caption = match character {
         Some(Character {
@@ -123,20 +125,32 @@ fn content_block(
                     username,
                 }) => {
                     let character_name = character_name.replace('"', "&quot;");
+                    let author_line = if for_tts {
+                        format!(r##"{username} <br/>as {character_name}. "##)
+                    } else {
+                        format!(r##"{username} <br/>as {character_name} <br/>{screenname}"##)
+                    };
+
                     format!(
                         r##"
                     <span author-id="{user_id}" author-name="{username}" character-id="{character_id}" character-name="{character_name}" class="icon-caption">
-                    {username} <br/>as {character_name} <br/>{screenname}
+                    {author_line}
                     </span>
                     "##
                     )
                 }
                 None => {
                     let character_name = character_name.replace('"', "&quot;");
+                    let author_line = if for_tts {
+                        format!(r##"{screenname} as none. "##)
+                    } else {
+                        format!(r##"{screenname}"##)
+                    };
+
                     format!(
                         r##"
                     <span character-id="{character_id}" character-name="{character_name}" class="icon-caption">
-                    {screenname}
+                    {author_line}
                     </span>
                     "##
                     )
@@ -147,9 +161,17 @@ fn content_block(
             Some(User {
                 id: user_id,
                 username,
-            }) => format!(
-                r##"<span author-id="{user_id}" author-name="{username}" class="icon-caption">{username}</span>"##
-            ),
+            }) => {
+                let for_tts_bits = if for_tts {
+                    " as none. "
+                } else {
+                    ""
+                };
+
+                format!(
+                    r##"<span author-id="{user_id}" author-name="{username}" class="icon-caption">{username}{for_tts_bits}</span>"##
+                )
+            },
             None => "".to_string(),
         },
     };
