@@ -13,11 +13,15 @@ struct Args {
     /// Reuse already downloaded data. Images are always cached.
     #[clap(long)]
     use_cache: bool,
+
+    /// Reformat the author/character bits to make for easier TTS listening.
+    #[clap(long)]
+    for_tts: bool,
 }
 
 #[tokio::main]
 async fn main() {
-    let Args { post_id, use_cache } = Args::parse();
+    let Args { post_id, use_cache, for_tts } = Args::parse();
 
     println!("Downloading post {post_id}");
 
@@ -39,7 +43,7 @@ async fn main() {
 
         let path = PathBuf::from(format!("./books/html/{post_id}.html"));
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, thread.to_single_html_page()).unwrap();
+        std::fs::write(path, thread.to_single_html_page(for_tts)).unwrap();
     }
 
     {
@@ -47,6 +51,6 @@ async fn main() {
 
         let path = PathBuf::from(format!("./books/epub/{post_id}.epub"));
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, &thread.to_epub().await.unwrap()).unwrap();
+        std::fs::write(path, &thread.to_epub(for_tts).await.unwrap()).unwrap();
     }
 }
