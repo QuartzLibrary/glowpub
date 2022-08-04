@@ -136,7 +136,7 @@ fn content_block(
                     format!(
                         r##"
                     <span character-id="{character_id}" character-name="{character_name}" class="icon-caption">
-                    {screenname}
+                    {character_name} <br/>{screenname}
                     </span>
                     "##
                     )
