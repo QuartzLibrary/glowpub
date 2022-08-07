@@ -18,4 +18,4 @@ To process the entire `planecrash` series:
 ```
 cargo run --example planecrash
 ```
-(`planecrash` posts updated on 2022-07-11 from [here](https://glowfic.com/boards/215))
+(`planecrash` posts updated on 2022-08-07 from [here](https://glowfic.com/boards/215))

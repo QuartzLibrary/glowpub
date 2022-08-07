@@ -3,8 +3,11 @@ use std::{collections::BTreeSet, path::PathBuf};
 
 use glowfic_to_epub::Thread;
 
-pub const IDS: [&[u64]; 2] = [&MAIN, &SANDBOXES];
+/// Board 215
+/// Planecrash
+pub const PLANECRASH: [&[u64]; 3] = [&MAIN, &SANDBOXES, &LECTURES];
 
+/// Board section 703
 /// Main planescrash section
 pub const MAIN: [u64; 10] = [
     4582, // mad investor chaos and the woman of asmodeus
@@ -19,15 +22,33 @@ pub const MAIN: [u64; 10] = [
     6132, // null action
 ];
 
+/// Board section 717
 /// planecrash sandboxes
-pub const SANDBOXES: [u64; 4] = [
+/// experimental doomthreads
+pub const SANDBOXES: [u64; 5] = [
     5775, // totally not evil
     5778, // welcome to project lawful
     5880, // I reject your alternate reality and substitute my own
     6124, // dear abrogail
+    6029, // it is a beautiful day in Cheliax and you are a horrible medianworld romance novel
 ];
 
-/// Download and process a all glowfic posts in the planecrash series.
+/// Board section 721
+/// planecrash lectures
+pub const LECTURES: [u64; 10] = [
+    5785, // to hell with science
+    5826, // to earth with science
+    5864, // the alien maths of dath ilan
+    5310, // kissing is not a human universal [linked out from thread 4582 at reply 1721818]
+    5403, // sfw tldr kissing is not a human universal [linked out from thread 4582 at reply 1721818]
+    5521, // tldr some human relationships
+    5610, // cheating is cuddleroom technique
+    5618, // sfw tldr cheating is cuddleroom technique
+    5638, // in another world we could have been trade partners
+    5671, // sfw tldr we could have been trade partners
+];
+
+/// Download and process all glowfic posts in the planecrash series.
 #[derive(Parser, Debug)]
 struct Args {
     /// Reuse already downloaded data. Images are always cached.
@@ -41,7 +62,7 @@ async fn main() {
 
     let mut threads = vec![];
 
-    for id in IDS.into_iter().flatten().copied() {
+    for id in PLANECRASH.into_iter().flatten().copied() {
         println!("Downloading post {id}");
 
         let thread = Thread::get_cached(id, !use_cache).await.unwrap().unwrap();
