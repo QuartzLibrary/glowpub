@@ -86,12 +86,13 @@ impl Thread {
 }
 impl Post {
     fn content_block(&self) -> String {
-        content_block(&None, &self.character, &self.icon, &self.content)
+        content_block(None, &None, &self.character, &self.icon, &self.content)
     }
 }
 impl Reply {
     fn content_block(&self) -> String {
         content_block(
+            Some(self.id),
             &Some(self.user.clone()),
             &self.character,
             &self.icon,
@@ -101,6 +102,7 @@ impl Reply {
 }
 
 fn content_block(
+    reply_id: Option<u64>,
     author: &Option<User>,
     character: &Option<Character>,
     icon: &Option<Icon>,
@@ -162,10 +164,14 @@ fn content_block(
 
     let content = fix_content(content);
 
+    let reply_id = reply_id
+        .map(|id| format!(r##" reply-id="{id}""##))
+        .unwrap_or_default();
+
     format!(
         r##"
 
-    <div class="content-block">
+    <div class="content-block"{reply_id}>
         <div class="character">
             {image}
             {caption}
