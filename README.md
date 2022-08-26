@@ -25,4 +25,4 @@ cargo run --example planecrash
 
 To re-use already cached items, add `-- --use-cache` to the end of the command.
 
-To change the output in a way that may be more comfortable for text-to-speech, add `-- --for-tts` to the end of the command.
+To change the output in a way that may be more comfortable for text-to-speech, add `-- --text-to-speech` to the end of the command.

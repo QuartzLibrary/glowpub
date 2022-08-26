@@ -78,12 +78,12 @@ pub fn raw_content_page(content_blocks: &[String]) -> String {
 }
 
 impl Thread {
-    fn content_blocks(&self, for_tts: bool) -> Vec<String> {
+    fn content_blocks(&self, text_to_speech: bool) -> Vec<String> {
         std::iter::once(self.post.content_block())
             .chain(
                 self.replies
                     .iter()
-                    .map(|reply| reply.content_block(for_tts)),
+                    .map(|reply| reply.content_block(text_to_speech)),
             )
             .collect()
     }
@@ -101,14 +101,14 @@ impl Post {
     }
 }
 impl Reply {
-    fn content_block(&self, for_tts: bool) -> String {
+    fn content_block(&self, text_to_speech: bool) -> String {
         content_block(
             Some(self.id),
             &Some(self.user.clone()),
             &self.character,
             &self.icon,
             &self.content,
-            for_tts,
+            text_to_speech,
         )
     }
 }
@@ -119,7 +119,7 @@ fn content_block(
     character: &Option<Character>,
     icon: &Option<Icon>,
     content: &str,
-    for_tts: bool,
+    text_to_speech: bool,
 ) -> String {
     let caption = match character {
         Some(Character {
@@ -138,8 +138,8 @@ fn content_block(
                     username,
                 }) => {
                     let character_name = character_name.replace('"', "&quot;");
-                    let author_line = if for_tts {
-                        format!(r##"{username} <br/>as {character_name}. "##)
+                    let author_line = if text_to_speech {
+                        format!(r##"{username} <br/>as {character_name}"##)
                     } else {
                         format!(r##"{username} <br/>as {character_name} <br/>{screenname}"##)
                     };
@@ -154,7 +154,7 @@ fn content_block(
                 }
                 None => {
                     let character_name = character_name.replace('"', "&quot;");
-                    let author_line = if for_tts {
+                    let author_line = if text_to_speech {
                         character_name.clone()
                     } else {
                         format!(r##"{character_name} <br/>{screenname}"##)
@@ -174,13 +174,10 @@ fn content_block(
             Some(User {
                 id: user_id,
                 username,
-            }) => {
-                let for_tts_bits = if for_tts { " as none. " } else { "" };
+            }) => format!(
+                r##"<span author-id="{user_id}" author-name="{username}" class="icon-caption">{username}</span>"##
+            ),
 
-                format!(
-                    r##"<span author-id="{user_id}" author-name="{username}" class="icon-caption">{username}{for_tts_bits}</span>"##
-                )
-            }
             None => "".to_string(),
         },
     };
