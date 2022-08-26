@@ -155,7 +155,7 @@ fn content_block(
                 None => {
                     let character_name = character_name.replace('"', "&quot;");
                     let author_line = if for_tts {
-                        format!(r##"{character_name}"##)
+                        character_name.clone()
                     } else {
                         format!(r##"{character_name} <br/>{screenname}"##)
                     };
