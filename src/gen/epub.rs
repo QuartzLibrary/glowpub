@@ -106,7 +106,11 @@ impl Thread {
         let subject = &self.post.subject;
         let mut pages = vec![];
 
-        let replies: Vec<String> = self.replies.iter().map(|reply| Reply::content_block(reply, for_tts)).collect();
+        let replies: Vec<String> = self
+            .replies
+            .iter()
+            .map(|reply| Reply::content_block(reply, for_tts))
+            .collect();
         for (i, chunk) in replies.chunks(30).enumerate() {
             pages.push(wrap_xml(
                 &format!("{subject} - Section {i}"),

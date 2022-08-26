@@ -21,7 +21,11 @@ struct Args {
 
 #[tokio::main]
 async fn main() {
-    let Args { post_id, use_cache, for_tts } = Args::parse();
+    let Args {
+        post_id,
+        use_cache,
+        for_tts,
+    } = Args::parse();
 
     println!("Downloading post {post_id}");
 

@@ -80,13 +80,24 @@ pub fn raw_content_page(content_blocks: &[String]) -> String {
 impl Thread {
     fn content_blocks(&self, for_tts: bool) -> Vec<String> {
         std::iter::once(self.post.content_block())
-            .chain(self.replies.iter().map(|reply| reply.content_block(for_tts)))
+            .chain(
+                self.replies
+                    .iter()
+                    .map(|reply| reply.content_block(for_tts)),
+            )
             .collect()
     }
 }
 impl Post {
     fn content_block(&self) -> String {
-        content_block(None, &None, &self.character, &self.icon, &self.content, false)
+        content_block(
+            None,
+            &None,
+            &self.character,
+            &self.icon,
+            &self.content,
+            false,
+        )
     }
 }
 impl Reply {
@@ -97,7 +108,7 @@ impl Reply {
             &self.character,
             &self.icon,
             &self.content,
-            for_tts
+            for_tts,
         )
     }
 }
@@ -164,16 +175,12 @@ fn content_block(
                 id: user_id,
                 username,
             }) => {
-                let for_tts_bits = if for_tts {
-                    " as none. "
-                } else {
-                    ""
-                };
+                let for_tts_bits = if for_tts { " as none. " } else { "" };
 
                 format!(
                     r##"<span author-id="{user_id}" author-name="{username}" class="icon-caption">{username}{for_tts_bits}</span>"##
                 )
-            },
+            }
             None => "".to_string(),
         },
     };
