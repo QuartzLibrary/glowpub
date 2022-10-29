@@ -66,7 +66,7 @@ impl Replies {
         let response = Self::get_all(id).await?;
 
         std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        std::fs::write(&cache_path, &serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+        std::fs::write(&cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
 
         Ok(response)
     }
@@ -154,7 +154,7 @@ where
     T: DeserializeOwned + Serialize,
 {
     if !invalidate_cache {
-        if let Ok(data) = std::fs::read(&cache_path) {
+        if let Ok(data) = std::fs::read(cache_path) {
             let parsed: Result<T, Vec<GlowficError>> = serde_json::from_slice(&data).unwrap();
             if parsed.is_ok() {
                 return Ok(parsed);
@@ -164,7 +164,7 @@ where
     let response = crate::api::get_glowfic(url).await?;
 
     std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-    std::fs::write(&cache_path, &serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+    std::fs::write(cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
 
     Ok(response)
 }
