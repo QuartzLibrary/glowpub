@@ -7,13 +7,13 @@ use crate::{Reply, Thread};
 use super::{raw_content_page, raw_copyright_page, raw_title_page, STYLE};
 
 impl Thread {
-    pub async fn to_epub(&self) -> Result<Vec<u8>, Box<dyn Error>> {
-        self.clone().as_epub().await
+    pub async fn to_epub(&self, text_to_speech: bool) -> Result<Vec<u8>, Box<dyn Error>> {
+        self.clone().as_epub(text_to_speech).await
     }
-    async fn as_epub(&mut self) -> Result<Vec<u8>, Box<dyn Error>> {
+    async fn as_epub(&mut self, text_to_speech: bool) -> Result<Vec<u8>, Box<dyn Error>> {
         let interned_images = self.intern_images().await?;
 
-        let mut builder = self.core_epub()?;
+        let mut builder = self.core_epub(text_to_speech)?;
 
         // Images
         for (_, image) in interned_images {
@@ -26,8 +26,8 @@ impl Thread {
         Ok(file)
     }
 
-    pub fn to_epub_remote_images(&self) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut builder = self.core_epub()?;
+    pub fn to_epub_remote_images(&self, text_to_speech: bool) -> Result<Vec<u8>, Box<dyn Error>> {
+        let mut builder = self.core_epub(text_to_speech)?;
 
         let mut file: Vec<u8> = vec![];
         builder.generate(&mut file)?;
@@ -35,7 +35,7 @@ impl Thread {
         Ok(file)
     }
 
-    fn core_epub(&self) -> Result<EpubBuilder<ZipLibrary>, Box<dyn Error>> {
+    fn core_epub(&self, text_to_speech: bool) -> Result<EpubBuilder<ZipLibrary>, Box<dyn Error>> {
         let mut builder = EpubBuilder::new(ZipLibrary::new()?)?;
 
         // Metadata
@@ -69,7 +69,7 @@ impl Thread {
         )?;
 
         // Sections
-        for (i, reply_page) in self.reply_pages().iter().enumerate() {
+        for (i, reply_page) in self.reply_pages(text_to_speech).iter().enumerate() {
             builder.add_content(
                 EpubContent::new(format!("section_{i}.xhtml"), reply_page.as_bytes())
                     .title(format!("Section {i}"))
@@ -102,11 +102,15 @@ impl Thread {
             &raw_content_page(&[self.post.content_block()]),
         )
     }
-    fn reply_pages(&self) -> Vec<String> {
+    fn reply_pages(&self, text_to_speech: bool) -> Vec<String> {
         let subject = &self.post.subject;
         let mut pages = vec![];
 
-        let replies: Vec<String> = self.replies.iter().map(Reply::content_block).collect();
+        let replies: Vec<String> = self
+            .replies
+            .iter()
+            .map(|reply| Reply::content_block(reply, text_to_speech))
+            .collect();
         for (i, chunk) in replies.chunks(30).enumerate() {
             pages.push(wrap_xml(
                 &format!("{subject} - Section {i}"),

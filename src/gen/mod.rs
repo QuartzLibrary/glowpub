@@ -78,25 +78,37 @@ pub fn raw_content_page(content_blocks: &[String]) -> String {
 }
 
 impl Thread {
-    fn content_blocks(&self) -> Vec<String> {
+    fn content_blocks(&self, text_to_speech: bool) -> Vec<String> {
         std::iter::once(self.post.content_block())
-            .chain(self.replies.iter().map(|reply| reply.content_block()))
+            .chain(
+                self.replies
+                    .iter()
+                    .map(|reply| reply.content_block(text_to_speech)),
+            )
             .collect()
     }
 }
 impl Post {
     fn content_block(&self) -> String {
-        content_block(None, &None, &self.character, &self.icon, &self.content)
+        content_block(
+            None,
+            &None,
+            &self.character,
+            &self.icon,
+            &self.content,
+            false,
+        )
     }
 }
 impl Reply {
-    fn content_block(&self) -> String {
+    fn content_block(&self, text_to_speech: bool) -> String {
         content_block(
             Some(self.id),
             &Some(self.user.clone()),
             &self.character,
             &self.icon,
             &self.content,
+            text_to_speech,
         )
     }
 }
@@ -107,6 +119,7 @@ fn content_block(
     character: &Option<Character>,
     icon: &Option<Icon>,
     content: &str,
+    text_to_speech: bool,
 ) -> String {
     let caption = match character {
         Some(Character {
@@ -125,20 +138,32 @@ fn content_block(
                     username,
                 }) => {
                     let character_name = character_name.replace('"', "&quot;");
+                    let author_line = if text_to_speech {
+                        format!(r##"{username} <br/>as {character_name}"##)
+                    } else {
+                        format!(r##"{username} <br/>as {character_name} <br/>{screenname}"##)
+                    };
+
                     format!(
                         r##"
                     <span author-id="{user_id}" author-name="{username}" character-id="{character_id}" character-name="{character_name}" class="icon-caption">
-                    {username} <br/>as {character_name} <br/>{screenname}
+                    {author_line}
                     </span>
                     "##
                     )
                 }
                 None => {
                     let character_name = character_name.replace('"', "&quot;");
+                    let author_line = if text_to_speech {
+                        character_name.clone()
+                    } else {
+                        format!(r##"{character_name} <br/>{screenname}"##)
+                    };
+
                     format!(
                         r##"
                     <span character-id="{character_id}" character-name="{character_name}" class="icon-caption">
-                    {character_name} <br/>{screenname}
+                    {author_line}
                     </span>
                     "##
                     )
@@ -152,6 +177,7 @@ fn content_block(
             }) => format!(
                 r##"<span author-id="{user_id}" author-name="{username}" class="icon-caption">{username}</span>"##
             ),
+
             None => "".to_string(),
         },
     };
