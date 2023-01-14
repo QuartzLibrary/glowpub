@@ -1,3 +1,5 @@
+use usvg_text_layout::TreeTextToPath;
+
 use crate::types::User;
 
 pub fn image(subject: &str, authors: &[User]) -> Vec<u8> {
@@ -56,19 +58,22 @@ fn svg(subject: &str, authors: &[User]) -> String {
 }
 
 fn render_svg(svg: &str) -> Vec<u8> {
-    let tree = {
-        let svg_options = usvg::Options {
-            fontdb: {
-                let mut db = fontdb::Database::new();
-                db.load_font_data(include_bytes!("Cinzel-VariableFont_wght.ttf").to_vec());
-                db.set_serif_family("Cinzel");
-                db
-            },
+    let mut tree = usvg::Tree::from_str(
+        svg,
+        &usvg::Options {
             font_family: "Cinzel".to_string(),
             ..Default::default()
-        };
-        usvg::Tree::from_str(svg, &svg_options.to_ref()).unwrap()
+        },
+    )
+    .unwrap();
+
+    let db = {
+        let mut db = fontdb::Database::new();
+        db.load_font_data(include_bytes!("Cinzel-VariableFont_wght.ttf").to_vec());
+        db.set_serif_family("Cinzel");
+        db
     };
+    tree.convert_text(&db, false);
 
     let pixmap = {
         let mut pixmap = tiny_skia::Pixmap::new(WIDTH, HEIGHT).unwrap();

@@ -14,11 +14,12 @@ glob = "0.3"
 regex = "1"
 ammonia = "3"
 
-textwrap = "0.15"
-resvg = "0.23"
-usvg = { version = "0.23", features = ["text"] }
-tiny-skia = "0.6" # TODO: Bump after `resvg` does
-fontdb = "0.9"
+textwrap = "0.16"
+resvg = "0.28"
+usvg = "0.28"
+tiny-skia = "0.8"
+fontdb = "0.10"
+usvg-text-layout = "0.28.0"
 
 [dev-dependencies]
 rand = "0.8"
