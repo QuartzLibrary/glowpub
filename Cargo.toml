@@ -9,10 +9,12 @@ serde_json = "1"
 reqwest = { version = "0.11", features = ["json"] }
 mime = "0.3"
 tokio = { version = "1", features = ["full"] }
-epub-builder = "0.5"
 glob = "0.3"
 regex = "1"
 ammonia = "3"
+chrono = { version = "0.4", features=["serde"] }
+uuid = { version = "1", features = ["v4"] }
+rand = "0.8"
 
 textwrap = "0.16"
 resvg = "0.28"
@@ -21,9 +23,11 @@ tiny-skia = "0.8"
 fontdb = "0.10"
 usvg-text-layout = "0.28.0"
 
-[dev-dependencies]
-rand = "0.8"
-clap = { version = "3.1", features = ["derive"] }
+[dependencies.epub-builder]
+git = "https://github.com/QuartzLibrary/epub-builder"
+branch = "reproducible"
+default-features = false
+features = ["libzip"]
 
-[patch.crates-io]
-epub-builder = { git = "https://github.com/lise-henry/epub-builder" }
+[dev-dependencies]
+clap = { version = "3.1", features = ["derive"] }
