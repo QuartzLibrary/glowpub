@@ -1,6 +1,8 @@
 use std::error::Error;
 
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
+use rand::{Rng, SeedableRng};
+use uuid::Uuid;
 
 use crate::{Reply, Thread};
 
@@ -43,6 +45,9 @@ impl Thread {
             builder.metadata("author", &author.username)?;
         }
         builder.metadata("title", &self.post.subject)?;
+        builder.set_publication_date(self.post.created_at);
+        builder.set_last_modified_date(self.post.tagged_at);
+        builder.set_uuid(self.uuid());
 
         // CSS
         builder.stylesheet(STYLE.as_bytes())?;
@@ -85,6 +90,18 @@ impl Thread {
         )?;
 
         Ok(builder)
+    }
+
+    fn uuid(&self) -> Uuid {
+        let seed: [[u8; 8]; 4] = [
+            *b"glowfic!",
+            self.post.id.to_be_bytes(),
+            self.post.created_at.timestamp().to_be_bytes(),
+            self.post.tagged_at.timestamp().to_be_bytes(),
+        ];
+        let seed: Vec<_> = seed.iter().flatten().copied().collect();
+        let uuid = rand::rngs::StdRng::from_seed(seed.try_into().unwrap()).gen();
+        Uuid::from_u128(uuid)
     }
 }
 
