@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -22,7 +23,8 @@ pub struct Post {
     pub board: BoardInPost,
     pub character: Option<Character>,
     pub content: String,
-    pub created_at: String,
+    #[serde(with = "crate::rfc3339")]
+    pub created_at: DateTime<Utc>,
     pub description: Option<String>,
     pub icon: Option<Icon>,
     pub num_replies: u64,
@@ -30,7 +32,8 @@ pub struct Post {
     pub section_order: u64,
     pub status: String,
     pub subject: String,
-    pub tagged_at: String,
+    #[serde(with = "crate::rfc3339")]
+    pub tagged_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -47,9 +50,11 @@ pub struct Reply {
     pub character: Option<Character>,
     pub character_name: Option<String>,
     pub content: String,
-    pub created_at: String,
+    #[serde(with = "crate::rfc3339")]
+    pub created_at: DateTime<Utc>,
     pub icon: Option<Icon>,
-    pub updated_at: String,
+    #[serde(with = "crate::rfc3339")]
+    pub updated_at: DateTime<Utc>,
     pub user: User,
 }
 

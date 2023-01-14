@@ -13,6 +13,7 @@ epub-builder = "0.5"
 glob = "0.3"
 regex = "1"
 ammonia = "3"
+chrono = { version="0.4", features=["serde"] }
 
 textwrap = "0.16"
 resvg = "0.28"

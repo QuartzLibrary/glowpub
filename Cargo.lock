@@ -161,6 +161,7 @@ dependencies = [
  "js-sys",
  "num-integer",
  "num-traits",
+ "serde",
  "time",
  "wasm-bindgen",
  "winapi",
@@ -516,6 +517,7 @@ name = "glowfic_to_epub"
 version = "0.1.0"
 dependencies = [
  "ammonia",
+ "chrono",
  "clap",
  "epub-builder",
  "fontdb",
