@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{future::Future, time::Duration};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -80,7 +80,7 @@ pub(crate) async fn get_glowfic<T>(
 where
     T: DeserializeOwned,
 {
-    let response = reqwest::get(url).await?;
+    let response = retry(5, || reqwest::get(url)).await?;
     let parsed: GlowficResponse<T> = response.json().await?;
 
     Ok(parsed.to_result())
@@ -93,4 +93,24 @@ impl<T> GlowficResponse<T> {
             GlowficResponse::Error { errors } => Err(errors),
         }
     }
+}
+
+/// Executes the closure and its returned [Future].
+///
+/// If it fails it'll retry up to the provided number of times, for a total of retries+1 attempts.
+///
+/// Uses an exponential backoff of (1, 10, 100, ...) milliseconds.
+pub async fn retry<T, E, Fut: Future<Output = Result<T, E>>>(
+    retries: u64,
+    mut f: impl FnMut() -> Fut,
+) -> Result<T, E> {
+    for i in 0..(retries + 1) {
+        match f().await {
+            Ok(ok) => return Ok(ok),
+            Err(e) if i == retries => return Err(e),
+            Err(_) => {}
+        }
+        tokio::time::sleep(Duration::from_millis(10 ^ i)).await;
+    }
+    unreachable!()
 }
