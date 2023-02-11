@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::path::PathBuf;
 
-use glowfic_to_epub::Thread;
+use glowfic_to_epub::{cached::write_if_changed, Thread};
 
 /// Download and process a Glowfic post.
 #[derive(Parser, Debug)]
@@ -47,7 +47,7 @@ async fn main() {
 
         let path = PathBuf::from(format!("./books/html/{post_id}.html"));
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, thread.to_single_html_page(text_to_speech)).unwrap();
+        write_if_changed(path, thread.to_single_html_page(text_to_speech)).unwrap();
     }
 
     {
@@ -55,6 +55,6 @@ async fn main() {
 
         let path = PathBuf::from(format!("./books/epub/{post_id}.epub"));
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, thread.to_epub(text_to_speech).await.unwrap()).unwrap();
+        write_if_changed(path, thread.to_epub(text_to_speech).await.unwrap()).unwrap();
     }
 }
