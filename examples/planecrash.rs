@@ -109,7 +109,7 @@ async fn main() {
 
             let path = PathBuf::from(format!("./books/epub/{post_id}.epub"));
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            std::fs::write(path, &thread.to_epub(text_to_speech).await.unwrap()).unwrap();
+            std::fs::write(path, thread.to_epub(text_to_speech).await.unwrap()).unwrap();
         }
     }
 
