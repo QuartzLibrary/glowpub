@@ -29,7 +29,7 @@ pub const MAIN: [u64; 11] = [
 pub const SANDBOXES: [u64; 5] = [
     6124, // dear abrogail
     6029, // it is a beautiful day in Cheliax and you are a horrible medianworld romance novel
-    5880, // I reject your alternate reality and substitute my own
+    5880, // I reject your alternate reality and substitute my own [linked out from thread 5694 at reply 1789682]
     5778, // welcome to project lawful
     5775, // totally not evil
 ];
@@ -37,17 +37,17 @@ pub const SANDBOXES: [u64; 5] = [
 /// Board section 721
 /// planecrash lectures
 pub const LECTURES: [u64; 11] = [
-    5785, // to hell with science
+    5785, // to hell with science [linked out from thread 5694 at reply 1777291]
     5826, // to earth with science
-    5864, // the alien maths of dath ilan
+    5864, // the alien maths of dath ilan [linked out from thread 5694 at reply 1786765]
     6131, // flashback: this is not a threat
     5310, // kissing is not a human universal [linked out from thread 4582 at reply 1721818]
     5403, // sfw tldr kissing is not a human universal [linked out from thread 4582 at reply 1721818]
     5521, // tldr some human relationships [alternative to 5504]
-    5610, // cheating is cuddleroom technique
-    5618, // sfw tldr cheating is cuddleroom technique
-    5638, // in another world we could have been trade partners
-    5671, // sfw tldr we could have been trade partners
+    5610, // cheating is cuddleroom technique [linked out from thread 5508 at reply 1756345]
+    5618, // sfw tldr cheating is cuddleroom technique [linked out from thread 5508 at reply 1756345]
+    5638, // in another world we could have been trade partners [linked out from thread 5508 at reply 1760768]
+    5671, // sfw tldr we could have been trade partners [linked out from thread 5508 at reply 1760768]
 ];
 
 /// Download and process all glowfic posts in the planecrash series.
