@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::{collections::BTreeSet, path::PathBuf};
 
-use glowfic_to_epub::{cached::write_if_changed, Thread};
+use glowfic_to_epub::{cached::write_if_changed, gen::Options, Thread};
 
 /// Board 215
 /// Planecrash
@@ -60,6 +60,13 @@ struct Args {
     /// Simplify character and user names to improve text-to-speech output.
     #[clap(long)]
     text_to_speech: bool,
+
+    /// Details tags can be hard to use on e-readers, this option forces them to always seem open.
+    ///
+    /// (Under the hood, it replaces the `details` tag with a `blockquote` and `summary` with `p`,
+    /// it also preprends `▼ ` to the `summary` tag to make it similar to an open details tag.)
+    #[clap(long)]
+    flatten_details: bool,
 }
 
 #[tokio::main]
@@ -67,7 +74,13 @@ async fn main() {
     let Args {
         use_cache,
         text_to_speech,
+        flatten_details,
     } = Args::parse();
+
+    let options = Options {
+        text_to_speech,
+        flatten_details,
+    };
 
     let mut threads = vec![];
 
@@ -101,7 +114,7 @@ async fn main() {
 
             let path = PathBuf::from(format!("./books/html/{post_id}.html"));
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            write_if_changed(path, thread.to_single_html_page(text_to_speech)).unwrap();
+            write_if_changed(path, thread.to_single_html_page(options)).unwrap();
         }
 
         {
@@ -109,7 +122,7 @@ async fn main() {
 
             let path = PathBuf::from(format!("./books/epub/{post_id}.epub"));
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            write_if_changed(path, thread.to_epub(text_to_speech).await.unwrap()).unwrap();
+            write_if_changed(path, thread.to_epub(options).await.unwrap()).unwrap();
         }
     }
 

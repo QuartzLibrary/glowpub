@@ -1,9 +1,9 @@
-use super::{raw_content_page, raw_copyright_page, raw_title_page, Thread, STYLE};
+use super::{raw_content_page, raw_copyright_page, raw_title_page, Options, Thread, STYLE};
 
 impl Thread {
-    pub fn to_single_html_page(&self, text_to_speech: bool) -> String {
+    pub fn to_single_html_page(&self, options: Options) -> String {
         let front = raw_title_page(&self.post, self.replies.len());
-        let content = raw_content_page(&self.content_blocks(text_to_speech));
+        let content = raw_content_page(&self.content_blocks(options));
         let back = raw_copyright_page(&self.post);
 
         wrap_html(&self.post.subject, &format!("{front}{content}{back}"))

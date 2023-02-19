@@ -6,16 +6,16 @@ use uuid::Uuid;
 
 use crate::{Reply, Thread};
 
-use super::{raw_content_page, raw_copyright_page, raw_title_page, STYLE};
+use super::{raw_content_page, raw_copyright_page, raw_title_page, Options, STYLE};
 
 impl Thread {
-    pub async fn to_epub(&self, text_to_speech: bool) -> Result<Vec<u8>, Box<dyn Error>> {
-        self.clone().as_epub(text_to_speech).await
+    pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
+        self.clone().as_epub(options).await
     }
-    async fn as_epub(&mut self, text_to_speech: bool) -> Result<Vec<u8>, Box<dyn Error>> {
+    async fn as_epub(&mut self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
         let interned_images = self.intern_images().await?;
 
-        let mut builder = self.core_epub(text_to_speech)?;
+        let mut builder = self.core_epub(options)?;
 
         // Images
         for (_, image) in interned_images {
@@ -28,8 +28,8 @@ impl Thread {
         Ok(file)
     }
 
-    pub fn to_epub_remote_images(&self, text_to_speech: bool) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut builder = self.core_epub(text_to_speech)?;
+    pub fn to_epub_remote_images(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
+        let mut builder = self.core_epub(options)?;
 
         let mut file: Vec<u8> = vec![];
         builder.generate(&mut file)?;
@@ -37,7 +37,7 @@ impl Thread {
         Ok(file)
     }
 
-    fn core_epub(&self, text_to_speech: bool) -> Result<EpubBuilder<ZipLibrary>, Box<dyn Error>> {
+    fn core_epub(&self, options: Options) -> Result<EpubBuilder<ZipLibrary>, Box<dyn Error>> {
         let mut builder = EpubBuilder::new(ZipLibrary::new()?)?;
 
         // Metadata
@@ -68,13 +68,16 @@ impl Thread {
 
         // Description
         builder.add_content(
-            EpubContent::new("description.xhtml", self.description_page().as_bytes())
-                .title("Description")
-                .reftype(ReferenceType::Preface),
+            EpubContent::new(
+                "description.xhtml",
+                self.description_page(options).as_bytes(),
+            )
+            .title("Description")
+            .reftype(ReferenceType::Preface),
         )?;
 
         // Sections
-        for (i, reply_page) in self.reply_pages(text_to_speech).iter().enumerate() {
+        for (i, reply_page) in self.reply_pages(options).iter().enumerate() {
             builder.add_content(
                 EpubContent::new(format!("section_{i}.xhtml"), reply_page.as_bytes())
                     .title(format!("Section {i}"))
@@ -112,21 +115,21 @@ impl Thread {
             &raw_title_page(&self.post, self.replies.len()),
         )
     }
-    fn description_page(&self) -> String {
+    fn description_page(&self, options: Options) -> String {
         let subject = &self.post.subject;
         wrap_xml(
             &format!("{subject} - Description"),
-            &raw_content_page(&[self.post.content_block()]),
+            &raw_content_page(&[self.post.content_block(options)]),
         )
     }
-    fn reply_pages(&self, text_to_speech: bool) -> Vec<String> {
+    fn reply_pages(&self, options: Options) -> Vec<String> {
         let subject = &self.post.subject;
         let mut pages = vec![];
 
         let replies: Vec<String> = self
             .replies
             .iter()
-            .map(|reply| Reply::content_block(reply, text_to_speech))
+            .map(|reply| Reply::content_block(reply, options))
             .collect();
         for (i, chunk) in replies.chunks(30).enumerate() {
             pages.push(wrap_xml(
