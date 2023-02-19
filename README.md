@@ -23,6 +23,29 @@ cargo run --example planecrash
 
 ---
 
-To re-use already cached items, add `-- --use-cache` to the end of the command.
+### Additional options
 
-To change the output in a way that may be more comfortable for text-to-speech, add `-- --text-to-speech` to the end of the command.
+> Combine these by chaining them after the `--`:
+>
+> `cargo run --example planecrash -- --use-cache --text-to-speech`.
+
+- To re-use already cached items, add `-- --use-cache` to the end of the command.
+
+- To change the output in a way that may be more comfortable for text-to-speech, add `-- --text-to-speech` to the end of the command.
+
+- To flatten `details` tags (see example below) use `-- --flatten-details`.
+
+
+With `--flatten-details` this:
+> <details>
+> <summary>This is a summary</summary>
+> This is the hidden content
+> </details>
+
+Becomes more or less:
+
+> ▼ This is a summary
+> 
+> This is the hidden content
+
+Note that you can't close the latter, so the inherent spoiler protection is compromised.

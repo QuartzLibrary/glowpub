@@ -1,9 +1,8 @@
 mod cover;
+mod transform;
+
 pub mod epub;
 pub mod html;
-mod named_entities;
-
-use std::borrow::Cow;
 
 use crate::{
     types::{BoardInPost, Character, Icon, User},
@@ -13,6 +12,12 @@ use crate::{
 use super::Thread;
 
 const STYLE: &str = include_str!("book.css");
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Options {
+    pub text_to_speech: bool,
+    pub flatten_details: bool,
+}
 
 fn raw_title_page(post: &Post, reply_count: usize) -> String {
     let Post {
@@ -41,7 +46,7 @@ fn raw_title_page(post: &Post, reply_count: usize) -> String {
         .map(|v| format!(r##"<div class="description">{v}</div>"##))
         .unwrap_or_default();
 
-    let description = fix_content(&description);
+    let description = fix_content(&description, false);
 
     format!(
         r##"
@@ -78,37 +83,37 @@ pub fn raw_content_page(content_blocks: &[String]) -> String {
 }
 
 impl Thread {
-    fn content_blocks(&self, text_to_speech: bool) -> Vec<String> {
-        std::iter::once(self.post.content_block())
+    fn content_blocks(&self, options: Options) -> Vec<String> {
+        std::iter::once(self.post.content_block(options))
             .chain(
                 self.replies
                     .iter()
-                    .map(|reply| reply.content_block(text_to_speech)),
+                    .map(|reply| reply.content_block(options)),
             )
             .collect()
     }
 }
 impl Post {
-    fn content_block(&self) -> String {
+    fn content_block(&self, options: Options) -> String {
         content_block(
             None,
             &None,
             &self.character,
             &self.icon,
             &self.content,
-            false,
+            options,
         )
     }
 }
 impl Reply {
-    fn content_block(&self, text_to_speech: bool) -> String {
+    fn content_block(&self, options: Options) -> String {
         content_block(
             Some(self.id),
             &Some(self.user.clone()),
             &self.character,
             &self.icon,
             &self.content,
-            text_to_speech,
+            options,
         )
     }
 }
@@ -119,7 +124,7 @@ fn content_block(
     character: &Option<Character>,
     icon: &Option<Icon>,
     content: &str,
-    text_to_speech: bool,
+    options: Options,
 ) -> String {
     let caption = match character {
         Some(Character {
@@ -138,7 +143,7 @@ fn content_block(
                     username,
                 }) => {
                     let character_name = character_name.replace('"', "&quot;");
-                    let author_line = if text_to_speech {
+                    let author_line = if options.text_to_speech {
                         format!(r##"{username} <br/>as {character_name}"##)
                     } else {
                         format!(r##"{username} <br/>as {character_name} <br/>{screenname}"##)
@@ -154,7 +159,7 @@ fn content_block(
                 }
                 None => {
                     let character_name = character_name.replace('"', "&quot;");
-                    let author_line = if text_to_speech {
+                    let author_line = if options.text_to_speech {
                         character_name.clone()
                     } else {
                         format!(r##"{character_name} <br/>{screenname}"##)
@@ -188,7 +193,7 @@ fn content_block(
         })
         .unwrap_or_default();
 
-    let content = fix_content(content);
+    let content = fix_content(content, options.flatten_details);
 
     let reply_id = reply_id
         .map(|id| format!(r##" reply-id="{id}""##))
@@ -261,76 +266,13 @@ fn author_names(authors: &[User]) -> String {
     }
 }
 
-/// Fixes internal relative links by adding the resto of the glowfic url.
-fn fix_content(content: &str) -> String {
-    let content = repair_and_sanitize(content);
-    let content = named_entities::decode_named_entities(content);
+fn fix_content(content: &str, flatten_details: bool) -> String {
+    let content = transform::repair_and_sanitize(content);
+    let content = transform::decode_named_entities(content);
 
-    // ammonia (or html5ever), seems to interpret '<tag />' as `<tag>` instead of `<tag/>`,
-    // which breaks some things. This is not great because `<br></br>` is also valid.
-    // TODO: do a regex replacement beforehand that is resistant to varying whitespace.
-    content.replace("<br>", "<br/>").replace("<hr>", "<hr/>")
+    if flatten_details {
+        transform::flatten_details(&content).unwrap()
+    } else {
+        content
+    }
 }
-
-fn repair_and_sanitize(content: &str) -> String {
-    let builder = {
-        let mut builder = ammonia::Builder::default();
-
-        for (tag, classes) in ALLOWED_CLASSES {
-            builder.add_allowed_classes(tag, classes);
-        }
-
-        builder.url_relative(ammonia::UrlRelative::RewriteWithBase(
-            "https://glowfic.com/".try_into().unwrap(),
-        ));
-
-        builder.add_generic_attributes(["style"]);
-
-        builder.attribute_filter(|_element, attribute, value| {
-            if attribute == "style" && !ALLOW_LISTED_STYLES.contains(&value) {
-                println!("Style attribute with value \"{value}\" found, removing it for safety.");
-                None
-            } else {
-                Some(Cow::Borrowed(value))
-            }
-        });
-
-        builder
-    };
-    let document = builder.clean(content);
-    document.to_string()
-}
-
-const ALLOWED_CLASSES: [(&str, &[&str]); 7] = [
-    (
-        "div",
-        &[
-            "copyright-page",
-            "title-page",
-            "description",
-            "content",
-            "character",
-        ],
-    ),
-    ("h1", &["title"]),
-    ("h2", &["authors"]),
-    ("h3", &["board"]),
-    ("img", &["icon"]),
-    ("span", &["icon-caption"]),
-    ("p", &["status", "reply-count"]),
-];
-
-const ALLOW_LISTED_STYLES: [&str; 12] = [
-    "width: auto;",
-    "border: 0;",
-    "text-decoration-line: line-through;",
-    "text-decoration: line-through;",
-    "text-decoration: underline;",
-    "max-width: 20em;",
-    "max-width: 30em;",
-    "max-width:30em",
-    "border: none;",
-    "border:none;",
-    "line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;",
-    "font-size: 11pt; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;",
-];

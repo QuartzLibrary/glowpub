@@ -1,5 +1,5 @@
 [package]
-name = "glowfic_to_epub"
+name = "glowpub"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,7 +11,6 @@ mime = "0.3"
 tokio = { version = "1", features = ["full"] }
 glob = "0.3"
 regex = "1"
-ammonia = "3"
 chrono = { version = "0.4", features=["serde"] }
 uuid = { version = "1", features = ["v4"] }
 rand = "0.8"
@@ -22,6 +21,13 @@ usvg = "0.28"
 tiny-skia = "0.8"
 fontdb = "0.10"
 usvg-text-layout = "0.28.0"
+
+ammonia = "3"
+lol_html = "0.3.2"
+html5ever = "0.26.0"
+xml5ever = "0.17.0"
+markup5ever_rcdom = "0.2.0"
+markup5ever = "0.11.0"
 
 [dependencies.epub-builder]
 git = "https://github.com/QuartzLibrary/epub-builder"

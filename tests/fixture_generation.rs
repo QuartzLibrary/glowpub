@@ -5,7 +5,7 @@ use std::{ops::Range, time::Duration};
 use rand::{distributions::Uniform, Rng};
 use serde_json::Value;
 
-use glowfic_to_epub::{api::Replies, Board, Post};
+use glowpub::{api::Replies, Board, Post};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 

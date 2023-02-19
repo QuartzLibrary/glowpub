@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 
-use glowfic_to_epub::{
+use glowpub::{
     api::{GlowficError, GlowficResponse, Replies},
     Board, Post,
 };

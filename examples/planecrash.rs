@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::{collections::BTreeSet, path::PathBuf};
 
-use glowfic_to_epub::Thread;
+use glowpub::{cached::write_if_changed, gen::Options, Thread};
 
 /// Board 215
 /// Planecrash
@@ -29,7 +29,7 @@ pub const MAIN: [u64; 11] = [
 pub const SANDBOXES: [u64; 5] = [
     6124, // dear abrogail
     6029, // it is a beautiful day in Cheliax and you are a horrible medianworld romance novel
-    5880, // I reject your alternate reality and substitute my own
+    5880, // I reject your alternate reality and substitute my own [linked out from thread 5694 at reply 1789682]
     5778, // welcome to project lawful
     5775, // totally not evil
 ];
@@ -37,17 +37,17 @@ pub const SANDBOXES: [u64; 5] = [
 /// Board section 721
 /// planecrash lectures
 pub const LECTURES: [u64; 11] = [
-    5785, // to hell with science
+    5785, // to hell with science [linked out from thread 5694 at reply 1777291]
     5826, // to earth with science
-    5864, // the alien maths of dath ilan
+    5864, // the alien maths of dath ilan [linked out from thread 5694 at reply 1786765]
     6131, // flashback: this is not a threat
     5310, // kissing is not a human universal [linked out from thread 4582 at reply 1721818]
     5403, // sfw tldr kissing is not a human universal [linked out from thread 4582 at reply 1721818]
     5521, // tldr some human relationships [alternative to 5504]
-    5610, // cheating is cuddleroom technique
-    5618, // sfw tldr cheating is cuddleroom technique
-    5638, // in another world we could have been trade partners
-    5671, // sfw tldr we could have been trade partners
+    5610, // cheating is cuddleroom technique [linked out from thread 5508 at reply 1756345]
+    5618, // sfw tldr cheating is cuddleroom technique [linked out from thread 5508 at reply 1756345]
+    5638, // in another world we could have been trade partners [linked out from thread 5508 at reply 1760768]
+    5671, // sfw tldr we could have been trade partners [linked out from thread 5508 at reply 1760768]
 ];
 
 /// Download and process all glowfic posts in the planecrash series.
@@ -60,6 +60,13 @@ struct Args {
     /// Simplify character and user names to improve text-to-speech output.
     #[clap(long)]
     text_to_speech: bool,
+
+    /// Details tags can be hard to use on e-readers, this option forces them to always seem open.
+    ///
+    /// (Under the hood, it replaces the `details` tag with a `blockquote` and `summary` with `p`,
+    /// it also preprends `▼ ` to the `summary` tag to make it similar to an open details tag.)
+    #[clap(long)]
+    flatten_details: bool,
 }
 
 #[tokio::main]
@@ -67,7 +74,13 @@ async fn main() {
     let Args {
         use_cache,
         text_to_speech,
+        flatten_details,
     } = Args::parse();
+
+    let options = Options {
+        text_to_speech,
+        flatten_details,
+    };
 
     let mut threads = vec![];
 
@@ -101,7 +114,7 @@ async fn main() {
 
             let path = PathBuf::from(format!("./books/html/{post_id}.html"));
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            std::fs::write(path, thread.to_single_html_page(text_to_speech)).unwrap();
+            write_if_changed(path, thread.to_single_html_page(options)).unwrap();
         }
 
         {
@@ -109,7 +122,7 @@ async fn main() {
 
             let path = PathBuf::from(format!("./books/epub/{post_id}.epub"));
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            std::fs::write(path, thread.to_epub(text_to_speech).await.unwrap()).unwrap();
+            write_if_changed(path, thread.to_epub(options).await.unwrap()).unwrap();
         }
     }
 

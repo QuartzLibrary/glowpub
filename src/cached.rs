@@ -66,7 +66,7 @@ impl Replies {
         let response = Self::get_all(id).await?;
 
         std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        std::fs::write(&cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+        write_if_changed(&cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
 
         Ok(response)
     }
@@ -112,7 +112,7 @@ impl Icon {
 
         let cache_path = Self::cache_key(*id, &extension);
         std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        std::fs::write(cache_path, &data).unwrap();
+        write_if_changed(cache_path, &data).unwrap();
 
         Ok((mime, data))
     }
@@ -164,7 +164,15 @@ where
     let response = crate::api::get_glowfic(url).await?;
 
     std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-    std::fs::write(cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+    write_if_changed(cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
 
     Ok(response)
+}
+
+/// Avoids updating the last-modified date of the file.
+pub fn write_if_changed(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> std::io::Result<()> {
+    match std::fs::read(path.as_ref()) {
+        Ok(data) if data == contents.as_ref() => Ok(()),
+        Ok(_) | Err(_) => std::fs::write(path, contents),
+    }
 }
