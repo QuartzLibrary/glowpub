@@ -1,5 +1,5 @@
 [package]
-name = "glowfic_to_epub"
+name = "glowpub"
 version = "0.1.0"
 edition = "2021"
 

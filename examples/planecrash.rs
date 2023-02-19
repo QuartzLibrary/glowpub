@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::{collections::BTreeSet, path::PathBuf};
 
-use glowfic_to_epub::{cached::write_if_changed, gen::Options, Thread};
+use glowpub::{cached::write_if_changed, gen::Options, Thread};
 
 /// Board 215
 /// Planecrash

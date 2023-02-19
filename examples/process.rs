@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::path::PathBuf;
 
-use glowfic_to_epub::{cached::write_if_changed, gen::Options, Thread};
+use glowpub::{cached::write_if_changed, gen::Options, Thread};
 
 /// Download and process a Glowfic post.
 #[derive(Parser, Debug)]
