@@ -566,7 +566,10 @@ dependencies = [
  "epub-builder",
  "fontdb",
  "glob",
+ "html5ever",
  "lol_html",
+ "markup5ever",
+ "markup5ever_rcdom",
  "mime",
  "rand 0.8.5",
  "regex",
@@ -580,6 +583,7 @@ dependencies = [
  "usvg",
  "usvg-text-layout",
  "uuid",
+ "xml5ever",
 ]
 
 [[package]]
@@ -933,6 +937,18 @@ dependencies = [
  "string_cache",
  "string_cache_codegen",
  "tendril",
+]
+
+[[package]]
+name = "markup5ever_rcdom"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9521dd6750f8e80ee6c53d65e2e4656d7de37064f3a7a5d2d11d05df93839c2"
+dependencies = [
+ "html5ever",
+ "markup5ever",
+ "tendril",
+ "xml5ever",
 ]
 
 [[package]]
@@ -2423,6 +2439,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "80d0f4e272c85def139476380b12f9ac60926689dd2e01d4923222f40580869d"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "xml5ever"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4034e1d05af98b51ad7214527730626f019682d797ba38b51689212118d8e650"
+dependencies = [
+ "log 0.4.17",
+ "mac",
+ "markup5ever",
 ]
 
 [[package]]

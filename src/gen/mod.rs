@@ -266,19 +266,13 @@ fn author_names(authors: &[User]) -> String {
     }
 }
 
-/// Fixes internal relative links by adding the resto of the glowfic url.
 fn fix_content(content: &str, flatten_details: bool) -> String {
     let content = transform::repair_and_sanitize(content);
     let content = transform::decode_named_entities(content);
 
-    let content = if flatten_details {
+    if flatten_details {
         transform::flatten_details(&content).unwrap()
     } else {
         content
-    };
-
-    // ammonia (or html5ever), seems to interpret '<tag />' as `<tag>` instead of `<tag/>`,
-    // which breaks some things. This is not great because `<br></br>` is also valid.
-    // TODO: do a regex replacement beforehand that is resistant to varying whitespace.
-    content.replace("<br>", "<br/>").replace("<hr>", "<hr/>")
+    }
 }

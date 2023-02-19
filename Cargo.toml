@@ -24,6 +24,10 @@ usvg-text-layout = "0.28.0"
 
 ammonia = "3"
 lol_html = "0.3.2"
+html5ever = "0.26.0"
+xml5ever = "0.17.0"
+markup5ever_rcdom = "0.2.0"
+markup5ever = "0.11.0"
 
 [dependencies.epub-builder]
 git = "https://github.com/QuartzLibrary/epub-builder"

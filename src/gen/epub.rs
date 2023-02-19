@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::{Reply, Thread};
 
-use super::{raw_content_page, raw_copyright_page, raw_title_page, Options, STYLE};
+use super::{raw_content_page, raw_copyright_page, raw_title_page, transform, Options, STYLE};
 
 impl Thread {
     pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
@@ -146,6 +146,8 @@ impl Thread {
 }
 
 fn wrap_xml(subject: &str, content: &str) -> String {
+    let content = transform::html_to_xml(content);
+
     format!(
         r##"<?xml version='1.0' encoding='utf-8'?>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
