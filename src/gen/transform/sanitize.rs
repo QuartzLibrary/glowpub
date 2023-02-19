@@ -50,7 +50,7 @@ const ALLOWED_CLASSES: [(&str, &[&str]); 7] = [
     ("p", &["status", "reply-count"]),
 ];
 
-const ALLOW_LISTED_STYLES: [&str; 12] = [
+const ALLOW_LISTED_STYLES: [&str; 13] = [
     "width: auto;",
     "border: 0;",
     "text-decoration-line: line-through;",
@@ -61,6 +61,7 @@ const ALLOW_LISTED_STYLES: [&str; 12] = [
     "max-width:30em",
     "border: none;",
     "border:none;",
+    "color: #ba372a;",
     "line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;",
     "font-size: 11pt; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;",
 ];
