@@ -19,6 +19,7 @@ impl Thread {
 
         // Images
         for (_, image) in interned_images {
+            let image = image.into_common_format();
             builder.add_resource(image.name(), image.data.as_slice(), image.mime.to_string())?;
         }
 

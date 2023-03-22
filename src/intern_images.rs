@@ -1,6 +1,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     error::Error,
+    io::Cursor,
 };
 
 use mime::Mime;
@@ -10,6 +11,7 @@ use crate::{
     utils::mime_to_image_extension,
 };
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InternedImage {
     pub id: usize,
     pub original_url: String,
@@ -24,6 +26,32 @@ impl InternedImage {
 
         // `glowfic_` is to ensure epub ids start with a letter.
         format!("glowfic_{id}.{extension}")
+    }
+    /// Converts some image formats into more widely supported ones for epub compatibility.
+    pub fn into_common_format(self) -> Self {
+        match (self.mime.type_(), self.mime.subtype()) {
+            (mime::IMAGE, mime::BMP)
+            | (mime::IMAGE, mime::GIF)
+            | (mime::IMAGE, mime::JPEG)
+            | (mime::IMAGE, mime::PNG)
+            | (mime::IMAGE, mime::SVG) => self,
+            (mime::IMAGE, subtype) if subtype.as_str() == "webp" => self.into_png(),
+            _ => unreachable!(),
+        }
+    }
+    fn into_png(self) -> Self {
+        let mut png_data = Vec::with_capacity(self.data.len());
+
+        image::load(Cursor::new(&self.data), image::ImageFormat::WebP)
+            .unwrap()
+            .write_to(&mut Cursor::new(&mut png_data), image::ImageFormat::Png)
+            .unwrap();
+
+        Self {
+            mime: mime::IMAGE_PNG,
+            data: png_data,
+            ..self
+        }
     }
 }
 
