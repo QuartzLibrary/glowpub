@@ -23,12 +23,12 @@ fontdb = "0.10"
 usvg-text-layout = "0.28.0"
 
 ammonia = "3"
-lol_html = "0.3.2"
+lol_html = "0.3.3"
 html5ever = "0.26.0"
 xml5ever = "0.17.0"
 markup5ever_rcdom = "0.2.0"
 markup5ever = "0.11.0"
-image = { version="0.24.5", default-features=false, features=["webp", "png"] }
+image = { version="0.24.6", default-features=false, features=["webp", "png"] }
 
 [dependencies.epub-builder]
 git = "https://github.com/QuartzLibrary/epub-builder"
@@ -37,4 +37,4 @@ default-features = false
 features = ["libzip"]
 
 [dev-dependencies]
-clap = { version = "3.1", features = ["derive"] }
+clap = { version = "3.2", features = ["derive"] }
