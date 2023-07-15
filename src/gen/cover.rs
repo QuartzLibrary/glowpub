@@ -73,7 +73,7 @@ fn render_svg(svg: &str) -> Vec<u8> {
         db.set_serif_family("Cinzel");
         db
     };
-    tree.convert_text(&db, false);
+    tree.convert_text(&db);
 
     let pixmap = {
         let mut pixmap = tiny_skia::Pixmap::new(WIDTH, HEIGHT).unwrap();
