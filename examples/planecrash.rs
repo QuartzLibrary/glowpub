@@ -9,7 +9,7 @@ pub const PLANECRASH: [&[u64]; 3] = [&MAIN, &SANDBOXES, &LECTURES];
 
 /// Board section 703
 /// Main planescrash section
-pub const MAIN: [u64; 11] = [
+pub const MAIN: [u64; 12] = [
     4582, // mad investor chaos and the woman of asmodeus
     5504, // some human relationships are less universal than others [follow up to 4582]
     5506, // take this report back and bring her a better report
@@ -21,6 +21,7 @@ pub const MAIN: [u64; 11] = [
     6132, // null action
     6334, // the meeting of their minds
     6480, // null action act ii: unact harder
+    6827, // null action act iii: the consequences of my own nonactions
 ];
 
 /// Board section 717
