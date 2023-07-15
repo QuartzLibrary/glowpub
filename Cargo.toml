@@ -11,7 +11,7 @@ mime = "0.3"
 tokio = { version = "1", features = ["full"] }
 glob = "0.3"
 regex = "1"
-chrono = { version = "0.4", features=["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 rand = "0.8"
 
@@ -28,7 +28,7 @@ html5ever = "0.26.0"
 xml5ever = "0.17.0"
 markup5ever_rcdom = "0.2.0"
 markup5ever = "0.11.0"
-image = { version="0.24.6", default-features=false, features=["webp", "png"] }
+image = { version = "0.24.6", default-features = false, features = ["webp", "png"] }
 
 [dependencies.epub-builder]
 git = "https://github.com/QuartzLibrary/epub-builder"
