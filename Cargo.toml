@@ -22,6 +22,8 @@ tiny-skia = "0.8"
 fontdb = "0.12"
 usvg-text-layout = "0.29.0"
 
+epub-builder = { version = "0.6", default-features = false, features = ["libzip"] }
+
 ammonia = "3"
 lol_html = "0.3.3"
 html5ever = "0.26.0"
@@ -30,11 +32,15 @@ markup5ever_rcdom = "0.2.0"
 markup5ever = "0.11.0"
 image = { version = "0.24.6", default-features = false, features = ["webp", "png"] }
 
-[dependencies.epub-builder]
-git = "https://github.com/QuartzLibrary/epub-builder"
-branch = "reproducible"
-default-features = false
-features = ["libzip"]
-
 [dev-dependencies]
 clap = { version = "4.1", features = ["derive"] }
+
+[patch.crates-io.epub-builder]
+# For reproducible epubs and fixes
+git = "https://github.com/lise-henry/epub-builder"
+rev = "5c1f9068f88c3ae6d36149de10bdf7e6ce6333df"
+
+[patch.crates-io.image]
+# For `webp` decoding fix
+git = "https://github.com/image-rs/image"
+rev = "2e87fcd2684eecdd5bbe795ed60e62188cc5d8a5"

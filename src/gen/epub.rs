@@ -47,7 +47,7 @@ impl Thread {
         }
         builder.metadata("title", &self.post.subject)?;
         builder.set_publication_date(self.post.created_at);
-        builder.set_last_modified_date(self.post.tagged_at);
+        builder.set_modified_date(self.post.tagged_at);
         builder.set_uuid(self.uuid());
 
         // CSS
