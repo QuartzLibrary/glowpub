@@ -68,8 +68,8 @@ pub fn raw_content_page(content_blocks: &[String]) -> String {
     let content: String = content_blocks
         .iter()
         .map(String::as_ref)
-        .intersperse("<hr/>")
-        .collect();
+        .collect::<Vec<_>>()
+        .join("<hr/>");
 
     format!(
         r##"
@@ -251,18 +251,15 @@ fn raw_copyright_page(post: &Post) -> String {
 }
 
 fn author_names(authors: &[User]) -> String {
-    match authors {
-        [User { username, .. }] => username.to_string(),
-        [User { username: one, .. }, User { username: two, .. }] => format!("{one} &#38; {two}"),
-        _ => authors[..authors.len() - 1]
-            .iter()
-            .map(|user| user.username.as_str())
-            .intersperse(", ")
-            .chain(std::iter::once(", and "))
-            .chain(std::iter::once(
-                authors[authors.len() - 1].username.as_str(),
-            ))
-            .collect(),
+    let usernames: Vec<_> = authors.iter().map(|a| a.username.as_str()).collect();
+    match &*usernames {
+        [] => String::new(),
+        [username] => username.to_string(),
+        [one, two] => format!("{one} &#38; {two}"),
+        [leading @ .., last] => {
+            let leading = leading.join(", ");
+            format!("{leading}, &#38; {last}")
+        }
     }
 }
 

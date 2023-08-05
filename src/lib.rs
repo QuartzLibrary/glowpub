@@ -1,5 +1,3 @@
-#![feature(iter_intersperse)]
-
 mod rfc3339;
 
 pub mod api;
