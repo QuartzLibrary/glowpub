@@ -1,3 +1,4 @@
+use usvg::TreeParsing;
 use usvg_text_layout::TreeTextToPath;
 
 use crate::types::User;
@@ -74,16 +75,11 @@ fn render_svg(svg: &str) -> Vec<u8> {
         db
     };
     tree.convert_text(&db);
+    let tree = resvg::Tree::from_usvg(&tree);
 
     let pixmap = {
         let mut pixmap = tiny_skia::Pixmap::new(WIDTH, HEIGHT).unwrap();
-        resvg::render(
-            &tree,
-            usvg::FitTo::Original,
-            tiny_skia::Transform::default(),
-            pixmap.as_mut(),
-        )
-        .unwrap();
+        tree.render(tiny_skia::Transform::default(), &mut pixmap.as_mut());
         pixmap
     };
 
