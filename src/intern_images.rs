@@ -30,6 +30,9 @@ impl InternedImage {
     /// Converts some image formats into more widely supported ones for epub compatibility.
     pub fn into_common_format(self) -> Self {
         match (self.mime.type_(), self.mime.subtype()) {
+            // This image has the wrong extension (png), it's actually a webp.
+            (_, _) if self.id == 309338 => self.into_png(),
+
             (mime::IMAGE, mime::BMP)
             | (mime::IMAGE, mime::GIF)
             | (mime::IMAGE, mime::JPEG)
@@ -39,18 +42,39 @@ impl InternedImage {
             _ => unreachable!(),
         }
     }
+    fn to_dynamic_image(&self) -> Result<image::DynamicImage, Box<dyn Error>> {
+        Ok(image::load(Cursor::new(&self.data), self.image_format()?)?)
+    }
+    fn image_format(&self) -> Result<image::ImageFormat, Box<dyn Error>> {
+        Ok(match (self.mime.type_(), self.mime.subtype()) {
+            // This image has the wrong extension (png), it's actually a webp.
+            (_, _) if self.id == 309338 => image::ImageFormat::WebP,
+
+            (mime::IMAGE, mime::BMP) => image::ImageFormat::Bmp,
+            (mime::IMAGE, mime::GIF) => image::ImageFormat::Gif,
+            (mime::IMAGE, mime::JPEG) => image::ImageFormat::Jpeg,
+            (mime::IMAGE, mime::PNG) => image::ImageFormat::Png,
+            (mime::IMAGE, mime::SVG) => Err("svg not supported")?,
+            (mime::IMAGE, subtype) if subtype.as_str() == "webp" => image::ImageFormat::WebP,
+            _ => unreachable!(),
+        })
+    }
     fn into_png(self) -> Self {
+        let id = self.id;
+        let original_url = self.original_url.clone();
+
         let mut png_data = Vec::with_capacity(self.data.len());
 
-        image::load(Cursor::new(&self.data), image::ImageFormat::WebP)
+        self.to_dynamic_image()
             .unwrap()
             .write_to(&mut Cursor::new(&mut png_data), image::ImageFormat::Png)
             .unwrap();
 
         Self {
+            id,
+            original_url,
             mime: mime::IMAGE_PNG,
             data: png_data,
-            ..self
         }
     }
 }
@@ -75,37 +99,38 @@ impl Thread {
             if skip.contains(&icon.id) {
                 continue;
             }
-            if let Err(e) = process_icon(icon, &mut interned_images).await {
-                println!(
-                    "Was unable to retrieve icon {}, the original url will be inlined.",
-                    icon.id
-                );
-                println!("{e:?}");
-                skip.insert(icon.id);
+            if let Some(interned) = interned_images.get(&icon.url) {
+                icon.url = interned.name();
+                continue;
             }
+
+            let interned = match icon.intern().await {
+                Ok(interned) => interned.into_common_format(),
+                Err(e) => {
+                    let id = icon.id;
+                    println!("Was unable to retrieve icon {id}, the original url will be inlined.");
+                    println!("{e:?}");
+                    skip.insert(icon.id);
+                    continue;
+                }
+            };
+
+            icon.url = interned.name();
+            interned_images.insert(icon.url.clone(), interned);
         }
 
         Ok(interned_images)
     }
 }
 
-async fn process_icon(
-    icon: &mut Icon,
-    interned_images: &mut BTreeMap<String, InternedImage>,
-) -> Result<(), Box<dyn Error>> {
-    let id: usize = icon.id.try_into().unwrap();
-
-    if !interned_images.contains_key(&icon.url) {
-        let (mime, data) = icon.retrieve_cached(false).await?;
-        let image = InternedImage {
-            id,
-            original_url: icon.url.clone(),
+impl Icon {
+    async fn intern(&self) -> Result<InternedImage, Box<dyn Error>> {
+        let (mime, data) = self.retrieve_cached(false).await?;
+        Ok(InternedImage {
+            id: self.id.try_into().unwrap(),
+            original_url: self.url.clone(),
             mime,
             data,
-        };
-        icon.url = image.name();
-        interned_images.insert(icon.url.clone(), image);
+        })
     }
-
-    Ok(())
 }
