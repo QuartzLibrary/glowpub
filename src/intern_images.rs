@@ -30,6 +30,9 @@ impl InternedImage {
     /// Converts some image formats into more widely supported ones for epub compatibility.
     pub fn into_common_format(self) -> Self {
         match (self.mime.type_(), self.mime.subtype()) {
+            // This image has the wrong extension (png), it's actually a webp.
+            (_, _) if self.id == 309338 => self.into_png(),
+
             (mime::IMAGE, mime::BMP)
             | (mime::IMAGE, mime::GIF)
             | (mime::IMAGE, mime::JPEG)
@@ -39,8 +42,14 @@ impl InternedImage {
             _ => unreachable!(),
         }
     }
-    fn into_dynamic_image(self) -> Result<image::DynamicImage, Box<dyn Error>> {
-        let format = match (self.mime.type_(), self.mime.subtype()) {
+    fn to_dynamic_image(&self) -> Result<image::DynamicImage, Box<dyn Error>> {
+        Ok(image::load(Cursor::new(&self.data), self.image_format()?)?)
+    }
+    fn image_format(&self) -> Result<image::ImageFormat, Box<dyn Error>> {
+        Ok(match (self.mime.type_(), self.mime.subtype()) {
+            // This image has the wrong extension (png), it's actually a webp.
+            (_, _) if self.id == 309338 => image::ImageFormat::WebP,
+
             (mime::IMAGE, mime::BMP) => image::ImageFormat::Bmp,
             (mime::IMAGE, mime::GIF) => image::ImageFormat::Gif,
             (mime::IMAGE, mime::JPEG) => image::ImageFormat::Jpeg,
@@ -48,8 +57,7 @@ impl InternedImage {
             (mime::IMAGE, mime::SVG) => Err("svg not supported")?,
             (mime::IMAGE, subtype) if subtype.as_str() == "webp" => image::ImageFormat::WebP,
             _ => unreachable!(),
-        };
-        Ok(image::load(Cursor::new(&self.data), format)?)
+        })
     }
     fn into_png(self) -> Self {
         let id = self.id;
@@ -57,7 +65,7 @@ impl InternedImage {
 
         let mut png_data = Vec::with_capacity(self.data.len());
 
-        self.into_dynamic_image()
+        self.to_dynamic_image()
             .unwrap()
             .write_to(&mut Cursor::new(&mut png_data), image::ImageFormat::Png)
             .unwrap();
