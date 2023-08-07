@@ -43,10 +43,9 @@ fn raw_title_page(post: &Post, reply_count: usize) -> String {
 
     let description = description
         .as_ref()
+        .map(|v| fix_content(v, false))
         .map(|v| format!(r##"<div class="description">{v}</div>"##))
         .unwrap_or_default();
-
-    let description = fix_content(&description, false);
 
     format!(
         r##"
