@@ -108,8 +108,10 @@ impl Thread {
                 Ok(interned) => interned.into_common_format(),
                 Err(e) => {
                     let id = icon.id;
-                    println!("Was unable to retrieve icon {id}, the original url will be inlined.");
-                    println!("{e:?}");
+                    log::info!(
+                        "Was unable to retrieve icon {id}, the original url will be inlined."
+                    );
+                    log::info!("{e:?}");
                     skip.insert(icon.id);
                     continue;
                 }

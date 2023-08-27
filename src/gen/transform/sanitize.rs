@@ -68,7 +68,7 @@ fn allowed_attribute<'u>(element: &str, attribute: &str, value: &'u str) -> Opti
         (_, "align", "left" | "right" | "center" | "justify") => Some(Cow::Borrowed(value)),
 
         (_, _, _) => {
-            println!("Removing unrecognised attribute: <{element} {attribute}=\"{value}\">");
+            log::info!("Removing unrecognised attribute: <{element} {attribute}=\"{value}\">");
             None
         }
     }
@@ -86,7 +86,7 @@ mod style {
 
     pub(super) fn allowed(value: &str) -> Option<Cow<'_, str>> {
         let Ok(declarations) = parse_declaration_block(value) else {
-            println!("Removing style attribute that has failed to parse: style=\"{value}\"");
+            log::info!("Removing style attribute that has failed to parse: style=\"{value}\"");
             return None;
         };
 
@@ -96,7 +96,7 @@ mod style {
         }
 
         let new_value = serialize_declaration_block(&new);
-        println!("Removing unrecognised or forbidden properties from style attribute: \nstyle=\"{value}\"\n-> style=\"{new_value}\"");
+        log::info!("Removing unrecognised or forbidden properties from style attribute: \nstyle=\"{value}\"\n-> style=\"{new_value}\"");
         if new_value.is_empty() {
             None
         } else {
