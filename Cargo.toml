@@ -25,6 +25,8 @@ usvg-text-layout = "0.35"
 epub-builder = { version = "0.7", default-features = false, features = ["libzip"] }
 
 ammonia = "3"
+cssparser = "0.29"
+lightningcss = "1.0.0-alpha.44"
 lol_html = "1.1"
 html5ever = "0.26.0"
 xml5ever = "0.17.0"
