@@ -105,7 +105,7 @@ impl Icon {
             }
         }
 
-        println!("Downloading icon {id} from {url}");
+        log::info!("Downloading icon {id} from {url}");
 
         let (mime, data) = self.retrieve().await?;
         let extension = mime_to_image_extension(&mime).ok_or(format!("Invalid mime: {mime}"))?;
@@ -139,7 +139,7 @@ impl Thread {
 
         for icon in icons {
             if let Err(e) = icon.retrieve_cached(invalidate_cache).await {
-                println!("{e:?}");
+                log::info!("{e:?}");
             }
         }
     }

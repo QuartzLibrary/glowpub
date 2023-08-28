@@ -4,36 +4,43 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+glob = "0.3"
+log = "0.4"
+mime = "0.3"
+rand = "0.8"
+regex = "1"
+uuid = { version = "1", features = ["v4"] }
+
+reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-reqwest = { version = "0.11", features = ["json"] }
-mime = "0.3"
 tokio = { version = "1", features = ["full"] }
-glob = "0.3"
-regex = "1"
-chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1", features = ["v4"] }
-rand = "0.8"
 
-textwrap = "0.16"
-resvg = "0.35"
-usvg = "0.35"
-tiny-skia = "0.10"
 fontdb = "0.14"
+resvg = "0.35"
+textwrap = "0.16"
+tiny-skia = "0.10"
+usvg = "0.35"
 usvg-text-layout = "0.35"
 
 epub-builder = { version = "0.7", default-features = false, features = ["libzip"] }
 
 ammonia = "3"
+cssparser = "0.29"
+html-escape = "0.2"
+html5ever = "0.26"
+lightningcss = "1.0.0-alpha.44"
 lol_html = "1.1"
-html5ever = "0.26.0"
-xml5ever = "0.17.0"
-markup5ever_rcdom = "0.2.0"
-markup5ever = "0.11.0"
-image = { version = "0.24.6", default-features = false, features = ["webp", "png"] }
+markup5ever = "0.11"
+markup5ever_rcdom = "0.2"
+xml5ever = "0.17"
+
+image = { version = "0.24", default-features = false, features = ["webp", "png"] }
 
 [dev-dependencies]
 clap = { version = "4.1", features = ["derive"] }
+simple_logger = "4.2"
 
 [patch.crates-io.image]
 # For `webp` decoding fix

@@ -72,6 +72,8 @@ struct Args {
 
 #[tokio::main]
 async fn main() {
+    simple_logger::init_with_level(log::Level::Info).unwrap();
+
     let Args {
         use_cache,
         text_to_speech,
@@ -86,11 +88,11 @@ async fn main() {
     let mut threads = vec![];
 
     for id in PLANECRASH.into_iter().flatten().copied() {
-        println!("Downloading post {id}");
+        log::info!("Downloading post {id}");
 
         let thread = Thread::get_cached(id, !use_cache).await.unwrap().unwrap();
 
-        println!("Downloaded post {id} - {}", &thread.post.subject);
+        log::info!("Downloaded post {id} - {}", &thread.post.subject);
 
         threads.push(thread);
     }
@@ -103,7 +105,7 @@ async fn main() {
 
     for icon in icons {
         if let Err(e) = icon.retrieve_cached(false).await {
-            println!("{e:?}");
+            log::info!("{e:?}");
         }
     }
 
@@ -111,7 +113,7 @@ async fn main() {
         let post_id = thread.post.id;
 
         {
-            println!("Generating html document {post_id}...");
+            log::info!("Generating html document {post_id}...");
 
             let path = PathBuf::from(format!("./books/html/{post_id}.html"));
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -119,7 +121,7 @@ async fn main() {
         }
 
         {
-            println!("Generating epub document {post_id}...");
+            log::info!("Generating epub document {post_id}...");
 
             let path = PathBuf::from(format!("./books/epub/{post_id}.epub"));
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -127,5 +129,5 @@ async fn main() {
         }
     }
 
-    println!("Done")
+    log::info!("Done")
 }

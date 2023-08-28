@@ -28,6 +28,8 @@ struct Args {
 
 #[tokio::main]
 async fn main() {
+    simple_logger::init_with_level(log::Level::Info).unwrap();
+
     let Args {
         post_id,
         use_cache,
@@ -40,23 +42,23 @@ async fn main() {
         flatten_details,
     };
 
-    println!("Downloading post {post_id}");
+    log::info!("Downloading post {post_id}");
 
     let thread = Thread::get_cached(post_id, !use_cache)
         .await
         .unwrap()
         .unwrap();
 
-    println!("Downloaded post {post_id} - {}", &thread.post.subject);
+    log::info!("Downloaded post {post_id} - {}", &thread.post.subject);
 
     {
-        println!("Caching all the icons...");
+        log::info!("Caching all the icons...");
 
         thread.cache_all_icons(false).await;
     }
 
     {
-        println!("Generating html document...");
+        log::info!("Generating html document...");
 
         let path = PathBuf::from(format!("./books/html/{post_id}.html"));
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -64,7 +66,7 @@ async fn main() {
     }
 
     {
-        println!("Generating epub document...");
+        log::info!("Generating epub document...");
 
         let path = PathBuf::from(format!("./books/epub/{post_id}.epub"));
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
