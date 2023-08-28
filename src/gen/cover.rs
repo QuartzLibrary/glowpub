@@ -20,7 +20,8 @@ const AUTHORS_TEXT_SIZE: u32 = 80;
 const STYLE: &str = r##"margin="20px" max-width="100%" text-anchor="middle" font-family="serif""##;
 
 fn svg(subject: &str, authors: &[User]) -> String {
-    let subject: String = textwrap::wrap(subject, 25)
+    let subject = super::transform::encode_html(subject);
+    let subject: String = textwrap::wrap(&subject, 25)
         .iter()
         .enumerate()
         .map(|(i, part)| {

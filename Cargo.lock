@@ -758,6 +758,7 @@ dependencies = [
  "epub-builder",
  "fontdb",
  "glob",
+ "html-escape",
  "html5ever",
  "image",
  "lightningcss",

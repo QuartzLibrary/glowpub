@@ -134,14 +134,16 @@ fn content_block(
             let screenname = screenname
                 .as_ref()
                 .map(|n| format!("({n})"))
+                .map(|n| transform::encode_html(&n))
                 .unwrap_or_default();
+            let character_name = transform::encode_html(character_name);
 
             match author {
                 Some(User {
                     id: user_id,
                     username,
                 }) => {
-                    let character_name = character_name.replace('"', "&quot;");
+                    let username = transform::encode_html(username);
                     let author_line = if options.text_to_speech {
                         format!(r##"{username} <br/>as {character_name}"##)
                     } else {
@@ -157,7 +159,6 @@ fn content_block(
                     )
                 }
                 None => {
-                    let character_name = character_name.replace('"', "&quot;");
                     let author_line = if options.text_to_speech {
                         character_name.clone()
                     } else {
@@ -178,9 +179,12 @@ fn content_block(
             Some(User {
                 id: user_id,
                 username,
-            }) => format!(
-                r##"<span author-id="{user_id}" author-name="{username}" class="icon-caption">{username}</span>"##
-            ),
+            }) => {
+                let username = transform::encode_html(username);
+                format!(
+                    r##"<span author-id="{user_id}" author-name="{username}" class="icon-caption">{username}</span>"##
+                )
+            }
 
             None => "".to_string(),
         },
@@ -188,6 +192,7 @@ fn content_block(
     let image = icon
         .as_ref()
         .map(|Icon { id, keyword, url }| {
+            let keyword = transform::encode_html(keyword);
             format!(r##"<img src="{url}" alt="{keyword}" glowfic-id="{id}" class="icon"/>"##)
         })
         .unwrap_or_default();
@@ -250,7 +255,11 @@ fn raw_copyright_page(post: &Post) -> String {
 }
 
 fn author_names(authors: &[User]) -> String {
-    let usernames: Vec<_> = authors.iter().map(|a| a.username.as_str()).collect();
+    let usernames: Vec<_> = authors
+        .iter()
+        .map(|a| transform::encode_html(&a.username))
+        .collect();
+
     match &*usernames {
         [] => String::new(),
         [username] => username.to_string(),
