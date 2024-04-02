@@ -5,7 +5,10 @@ use std::{future::Future, time::Duration};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{Board, Post, Reply};
+use crate::{
+    types::{BoardPageResponse, PostInBoard},
+    Board, Post, Reply,
+};
 
 const GLOWFIC_API_V1: &str = "https://www.glowfic.com/api/v1";
 
@@ -14,6 +17,44 @@ const GLOWFIC_API_V1: &str = "https://www.glowfic.com/api/v1";
 enum GlowficResponse<T> {
     Value(T),
     Error { errors: Vec<GlowficError> },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+pub struct BoardPosts(pub(crate) Vec<PostInBoard>);
+impl BoardPosts {
+    pub fn page_url(id: u64, page: u64) -> String {
+        format!("{GLOWFIC_API_V1}/boards/{id}/posts?page={page}")
+    }
+
+    pub async fn get_page(
+        id: u64,
+        page: u64,
+    ) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, reqwest::Error> {
+        match get_glowfic::<BoardPageResponse>(&Self::page_url(id, page)).await? {
+            Ok(result) => return Ok(Ok(result.results)),
+            Err(errors) => return Ok(Err(errors)),
+        }
+    }
+
+    pub async fn get_all(id: u64) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, reqwest::Error> {
+        let mut posts = vec![];
+
+        for page in 1.. {
+            match Self::get_page(id, page).await? {
+                Ok(mut inner_posts) => {
+                    if inner_posts.is_empty() {
+                        break;
+                    }
+                    posts.append(&mut inner_posts);
+                }
+                Err(errors) => return Ok(Err(errors)),
+            }
+
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+
+        Ok(Ok(posts))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
