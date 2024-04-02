@@ -9,6 +9,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     api::{GlowficError, Replies},
+    assets::retrieve_icon,
     types::{Icon, Thread},
     utils::{extension_to_image_mime, guess_image_mime, mime_to_image_extension},
     Board, Post, Reply,
@@ -84,6 +85,10 @@ impl Icon {
     ) -> Result<(Mime, Vec<u8>), Box<dyn Error>> {
         let Self { id, url, .. } = self;
 
+        let Some(url) = url else {
+            return Err("No url provided for this icon".into());
+        };
+
         if !invalidate_cache {
             let files: Vec<_> = {
                 let blob_path = Self::cache_key(*id, "*");
@@ -107,7 +112,7 @@ impl Icon {
 
         log::info!("Downloading icon {id} from {url}");
 
-        let (mime, data) = self.retrieve().await?;
+        let (mime, data) = retrieve_icon(url).await?;
 
         let mime = guess_image_mime(&data).unwrap_or(mime);
 

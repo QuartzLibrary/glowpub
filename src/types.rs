@@ -85,6 +85,6 @@ pub struct User {
 #[serde(deny_unknown_fields)]
 pub struct Icon {
     pub id: u64,
-    pub keyword: String,
-    pub url: String,
+    pub keyword: Option<String>,
+    pub url: Option<String>,
 }

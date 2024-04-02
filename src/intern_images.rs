@@ -93,8 +93,13 @@ impl Thread {
             if skip.contains(&icon.id) {
                 continue;
             }
-            if let Some(interned) = interned_images.get(&icon.url) {
-                icon.url = interned.name();
+
+            let Some(url) = icon.url.clone() else {
+                continue;
+            };
+
+            if let Some(interned) = interned_images.get(&url) {
+                icon.url = Some(interned.name());
                 continue;
             }
 
@@ -111,8 +116,8 @@ impl Thread {
                 }
             };
 
-            icon.url = interned.name();
-            interned_images.insert(icon.url.clone(), interned);
+            icon.url = Some(interned.name());
+            interned_images.insert(url, interned);
         }
 
         Ok(interned_images)
@@ -124,7 +129,7 @@ impl Icon {
         let (mime, data) = self.retrieve_cached(false).await?;
         Ok(InternedImage {
             id: self.id.try_into().unwrap(),
-            original_url: self.url.clone(),
+            original_url: self.url.clone().unwrap(),
             mime,
             data,
         })

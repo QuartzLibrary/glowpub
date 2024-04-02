@@ -191,9 +191,16 @@ fn content_block(
     };
     let image = icon
         .as_ref()
-        .map(|Icon { id, keyword, url }| {
-            let keyword = transform::encode_html(keyword);
-            format!(r##"<img src="{url}" alt="{keyword}" glowfic-id="{id}" class="icon"/>"##)
+        .and_then(|Icon { id, keyword, url }| {
+            let keyword = keyword
+                .as_deref()
+                .map(transform::encode_html)
+                .map(|keyword| format!(r#" alt="{keyword}""#))
+                .unwrap_or_default();
+            let url = url.as_ref()?;
+            Some(format!(
+                r##"<img src="{url}"{keyword} glowfic-id="{id}" class="icon"/>"##
+            ))
         })
         .unwrap_or_default();
 
