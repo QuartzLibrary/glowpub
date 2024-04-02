@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use usvg::TreeParsing;
 use usvg_text_layout::TreeTextToPath;
 
@@ -21,28 +23,32 @@ const STYLE: &str = r##"margin="20px" max-width="100%" text-anchor="middle" font
 
 fn svg(subject: &str, authors: &[User]) -> String {
     let subject = super::transform::encode_html(subject);
-    let subject: String = textwrap::wrap(&subject, 25)
-        .iter()
-        .enumerate()
-        .map(|(i, part)| {
+    let subject: String = textwrap::wrap(&subject, 25).iter().enumerate().fold(
+        String::new(),
+        |mut subject, (i, part)| {
             let i: u32 = i.try_into().unwrap();
-            format!(
+            write!(
+                subject,
                 r##"<tspan x="{HALF_WIDTH}" y="{}">{part}</tspan>"##,
                 FIFTH_HEIGHT + (TITLE_TEXT_SIZE * (i + 1))
             )
-        })
-        .collect();
+            .unwrap();
+            subject
+        },
+    );
     let authors: String = textwrap::wrap(&super::author_names(authors), 25)
         .iter()
         .enumerate()
-        .map(|(i, part)| {
+        .fold(String::new(), |mut authors, (i, part)| {
             let i: u32 = i.try_into().unwrap();
-            format!(
+            write!(
+                authors,
                 r##"<tspan x="{HALF_WIDTH}" y="{}">{part}</tspan>"##,
                 ALMOST_BOTTOM + (AUTHORS_TEXT_SIZE * (i + 1))
             )
-        })
-        .collect();
+            .unwrap();
+            authors
+        });
 
     format!(
         r##"<svg viewBox="0 0 {WIDTH} {HEIGHT}" xmlns="http://www.w3.org/2000/svg">
