@@ -8,8 +8,8 @@ use mime::Mime;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
-    api::{GlowficError, Replies},
-    types::{Icon, Thread},
+    api::{GlowficError, Replies, BoardPosts, Threads, SectionedThreads},
+    types::{Icon, Thread, Section, PostInBoard},
     utils::{extension_to_image_mime, mime_to_image_extension},
     Board, Post, Reply,
 };
@@ -142,6 +142,116 @@ impl Thread {
                 log::info!("{e:?}");
             }
         }
+    }
+}
+
+impl BoardPosts {
+    fn board_cache_key(board_id: u64) -> PathBuf {
+        format!("{CACHE_ROOT}/boards/{board_id}/posts.json").into()
+    }
+
+    pub async fn board_get_all_cached(
+        board_id: u64,
+        invalidate_cache: bool,
+    ) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, Box<dyn Error>> {
+        let cache_path = Self::board_cache_key(board_id);
+
+        if !invalidate_cache {
+            if let Ok(data) = std::fs::read(&cache_path) {
+                let parsed: Result<Vec<PostInBoard>, Vec<GlowficError>> =
+                    serde_json::from_slice(&data).unwrap();
+                if let Ok(posts) = parsed {
+                    return Ok(Ok(posts));
+                }
+            }
+        }
+
+        let response = Self::board_get_all(board_id).await?;
+
+        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
+        write_if_changed(&cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+
+        Ok(response)
+    }
+}
+
+impl Threads {
+    pub async fn board_get_all_cached(
+        board_id: u64,
+        invalidate_cache: bool,
+    ) -> Result<Result<Vec<Thread>, Vec<GlowficError>>, Box<dyn Error>> {
+        let mut threads = vec![];
+        let board_posts = match BoardPosts::board_get_all_cached(board_id, invalidate_cache).await? {
+            Ok(board_posts) => board_posts,
+            Err(errors) => return Ok(Err(errors)),
+        };
+
+        for board_post in board_posts {
+            let post = match Post::get_cached(board_post.id, invalidate_cache).await? {
+                Ok(post) => post,
+                Err(errors) => return Ok(Err(errors)),
+            };
+            match Replies::get_all_cached(post.id, invalidate_cache).await? {
+                Ok(replies) => threads.push(Thread { post, replies }),
+                Err(errors) => return Ok(Err(errors)),
+            };
+        }
+
+        Ok(Ok(threads))
+    }
+    pub async fn cache_all_icons(&self, invalidate_cache: bool) {
+        let icons: BTreeSet<_> = self.0
+            .iter()
+            .flat_map(|thread| thread.icons())
+            .cloned()
+            .collect();
+
+        for icon in icons {
+            if let Err(e) = icon.retrieve_cached(invalidate_cache).await {
+                log::info!("{e:?}");
+            }
+        }
+    }
+}
+
+impl SectionedThreads {
+    pub async fn get_all_cached(
+        board_id: u64,
+        invalidate_cache: bool,
+    ) -> Result<Result<Vec<(Section, Vec<Thread>)>, Vec<GlowficError>>, Box<dyn Error>> {
+        let mut sections = match Board::get(board_id).await? {
+            Ok(board) => board.board_sections,
+            Err(errors) => return Ok(Err(errors)),
+        };
+        sections.push(Section::null());
+
+        let mut sectioned_threads = vec![];
+        for section in sections {
+            sectioned_threads.push((section, vec![]));
+        }
+        sectioned_threads.sort_by(|a, b| a.0.order.cmp(&b.0.order));
+
+        let threads = match Threads::board_get_all_cached(board_id, invalidate_cache).await? {
+            Ok(threads) => threads,
+            Err(errors) => return Ok(Err(errors)),
+        };
+        
+        for thread in threads {
+            let section_id = match thread.post.section {
+                Some(ref section) => section.id,
+                None => 0,
+            };
+            match sectioned_threads.iter_mut().find(|r| r.0.id == section_id) {
+                Some(thread_section) => thread_section.1.push(thread),
+                None => return Err(Box::<dyn Error>::from("Section {section_id} not found.")),
+            };
+        }
+
+        for thread_section in &mut sectioned_threads {
+            thread_section.1.sort_by(|a, b| a.post.section_order.cmp(&b.post.section_order));
+        }
+
+        return Ok(Ok(sectioned_threads));
     }
 }
 

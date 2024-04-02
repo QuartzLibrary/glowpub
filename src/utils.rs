@@ -2,13 +2,19 @@ use std::str::FromStr;
 
 use mime::Mime;
 
-use crate::types::{Icon, Thread};
+use crate::types::{Icon, Thread, Section};
 
 impl Thread {
     pub fn icons(&self) -> impl Iterator<Item = &Icon> {
         std::iter::once(self.post.icon.as_ref())
             .flatten()
             .chain(self.replies.iter().flat_map(|r| r.icon.as_ref()))
+    }
+}
+
+impl Section {
+    pub fn null() -> Section {
+        return Self { id: 0, name: String::from("Unsectioned Posts"), order: 999 };
     }
 }
 

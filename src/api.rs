@@ -2,7 +2,10 @@ use std::{future::Future, time::Duration};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{Board, Post, Reply};
+use crate::{
+    types::{Thread, Section, BoardPageResponse, PostInBoard},
+    Board, Post, Reply,
+};
 
 const GLOWFIC_API_V1: &str = "https://www.glowfic.com/api/v1";
 
@@ -15,6 +18,50 @@ pub enum GlowficResponse<T> {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub struct Replies(pub(crate) Vec<Reply>);
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+pub struct BoardPosts(pub(crate) Vec<PostInBoard>);
+impl BoardPosts {
+    pub fn board_page_url(board_id: u64, page: u64) -> String {
+        format!("{GLOWFIC_API_V1}/boards/{board_id}/posts?page={page}")
+    }
+
+    pub async fn board_get_page(
+        board_id: u64,
+        page: u64,
+    ) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, reqwest::Error> {
+        match get_glowfic::<BoardPageResponse>(&Self::board_page_url(board_id, page)).await? {
+            Ok(result) => return Ok(Ok(result.results)),
+            Err(errors) => return Ok(Err(errors)),
+        }
+    }
+
+    pub async fn board_get_all(id: u64) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, reqwest::Error> {
+        let mut posts = vec![];
+
+        for page in 1.. {
+            match Self::board_get_page(id, page).await? {
+                Ok(mut inner_posts) => {
+                    if inner_posts.is_empty() {
+                        break;
+                    }
+                    posts.append(&mut inner_posts);
+                }
+                Err(errors) => return Ok(Err(errors)),
+            }
+
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+
+        Ok(Ok(posts))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+pub struct Threads(pub(crate) Vec<Thread>);
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+pub struct SectionedThreads(pub(crate) Vec<(Section, Vec<Thread>)>);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct GlowficError {
@@ -82,7 +129,7 @@ where
 {
     let response = retry(5, || reqwest::get(url)).await?;
     let parsed: GlowficResponse<T> = response.json().await?;
-
+    
     Ok(parsed.to_result())
 }
 
