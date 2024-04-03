@@ -30,9 +30,6 @@ impl InternedImage {
     /// Converts some image formats into more widely supported ones for epub compatibility.
     pub fn into_common_format(self) -> Self {
         match (self.mime.type_(), self.mime.subtype()) {
-            // This image has the wrong extension (png), it's actually a webp.
-            (_, _) if self.id == 309338 => self.into_png(),
-
             (mime::IMAGE, mime::BMP)
             | (mime::IMAGE, mime::GIF)
             | (mime::IMAGE, mime::JPEG)
@@ -47,9 +44,6 @@ impl InternedImage {
     }
     fn image_format(&self) -> Result<image::ImageFormat, Box<dyn Error>> {
         Ok(match (self.mime.type_(), self.mime.subtype()) {
-            // This image has the wrong extension (png), it's actually a webp.
-            (_, _) if self.id == 309338 => image::ImageFormat::WebP,
-
             (mime::IMAGE, mime::BMP) => image::ImageFormat::Bmp,
             (mime::IMAGE, mime::GIF) => image::ImageFormat::Gif,
             (mime::IMAGE, mime::JPEG) => image::ImageFormat::Jpeg,

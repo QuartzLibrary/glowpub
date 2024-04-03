@@ -10,7 +10,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::{
     api::{GlowficError, Replies},
     types::{Icon, Thread},
-    utils::{extension_to_image_mime, mime_to_image_extension},
+    utils::{extension_to_image_mime, guess_image_mime, mime_to_image_extension},
     Board, Post, Reply,
 };
 
@@ -108,6 +108,9 @@ impl Icon {
         log::info!("Downloading icon {id} from {url}");
 
         let (mime, data) = self.retrieve().await?;
+
+        let mime = guess_image_mime(&data).unwrap_or(mime);
+
         let extension = mime_to_image_extension(&mime).ok_or(format!("Invalid mime: {mime}"))?;
 
         let cache_path = Self::cache_key(*id, &extension);

@@ -1,5 +1,6 @@
-use std::str::FromStr;
+use std::{io::Cursor, str::FromStr};
 
+use image::io::Reader;
 use mime::Mime;
 
 use crate::types::{Icon, Thread};
@@ -23,6 +24,17 @@ pub fn mime_to_image_extension(mime: &Mime) -> Option<String> {
         _ => None,
     }
     .map(str::to_string)
+}
+
+pub fn guess_image_mime(data: &[u8]) -> Option<Mime> {
+    let mime = Reader::new(Cursor::new(data))
+        .with_guessed_format()
+        .expect("reader shouldn't fail, it is backed by a slice")
+        .format()?
+        .to_mime_type()
+        .parse::<Mime>()
+        .expect("`image` crate should return a valid mime");
+    Some(mime)
 }
 
 pub fn extension_to_image_mime(extension: &str) -> Option<Mime> {
