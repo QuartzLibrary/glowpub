@@ -14,12 +14,17 @@ It'll then generate a single html file in `/books/html/<post-id>.html`, and an e
 
 ---
 
-To process the entire `planecrash` series:
+To process an entire board, run:
 ```
-cargo run --example planecrash
+cargo run --example process_board <board-id>
 ```
 
-(`planecrash` posts updated on 2022-08-07 from [here](https://glowfic.com/boards/215))
+---
+
+To process the entire `planecrash` series:
+```
+cargo run --example process_board 215
+```
 
 ---
 
@@ -27,7 +32,7 @@ cargo run --example planecrash
 
 > Combine these by chaining them after the `--`:
 >
-> `cargo run --example planecrash -- --use-cache --text-to-speech`.
+> `cargo run --example process_board 215 -- --use-cache --text-to-speech`.
 
 - To re-use already cached items, add `-- --use-cache` to the end of the command.
 
