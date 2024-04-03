@@ -3,10 +3,11 @@ mod tests;
 
 use std::{future::Future, time::Duration};
 
+use chrono::{DateTime, Utc};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
-    types::{BoardPageResponse, PostInBoard},
+    types::{BoardInPost, Section, User},
     Board, Post, Reply,
 };
 
@@ -17,44 +18,6 @@ const GLOWFIC_API_V1: &str = "https://www.glowfic.com/api/v1";
 enum GlowficResponse<T> {
     Value(T),
     Error { errors: Vec<GlowficError> },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
-pub struct BoardPosts(pub(crate) Vec<PostInBoard>);
-impl BoardPosts {
-    pub fn page_url(id: u64, page: u64) -> String {
-        format!("{GLOWFIC_API_V1}/boards/{id}/posts?page={page}")
-    }
-
-    pub async fn get_page(
-        id: u64,
-        page: u64,
-    ) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, reqwest::Error> {
-        match get_glowfic::<BoardPageResponse>(&Self::page_url(id, page)).await? {
-            Ok(result) => return Ok(Ok(result.results)),
-            Err(errors) => return Ok(Err(errors)),
-        }
-    }
-
-    pub async fn get_all(id: u64) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, reqwest::Error> {
-        let mut posts = vec![];
-
-        for page in 1.. {
-            match Self::get_page(id, page).await? {
-                Ok(mut inner_posts) => {
-                    if inner_posts.is_empty() {
-                        break;
-                    }
-                    posts.append(&mut inner_posts);
-                }
-                Err(errors) => return Ok(Err(errors)),
-            }
-
-            tokio::time::sleep(Duration::from_millis(100)).await;
-        }
-
-        Ok(Ok(posts))
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -114,6 +77,67 @@ impl Replies {
         }
 
         Ok(Ok(replies))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BoardPosts {
+    results: Vec<PostInBoard>,
+}
+/// A subset of [Post].
+///
+/// Here because it's what this api call uses, but we should normalise it to [Post] everywhere
+/// for simplicity.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PostInBoard {
+    pub id: u64,
+    pub authors: Vec<User>,
+    pub board: BoardInPost,
+    #[serde(with = "crate::rfc3339")]
+    pub created_at: DateTime<Utc>,
+    pub description: Option<String>,
+    pub num_replies: u64,
+    pub section: Option<Section>,
+    pub section_order: u64,
+    pub status: String,
+    pub subject: String,
+    #[serde(with = "crate::rfc3339")]
+    pub tagged_at: DateTime<Utc>,
+}
+impl BoardPosts {
+    pub fn page_url(id: u64, page: u64) -> String {
+        format!("{GLOWFIC_API_V1}/boards/{id}/posts?page={page}")
+    }
+
+    async fn get_page(
+        id: u64,
+        page: u64,
+    ) -> Result<Result<Self, Vec<GlowficError>>, reqwest::Error> {
+        get_glowfic::<Self>(&Self::page_url(id, page)).await
+    }
+
+    pub async fn get_all(
+        id: u64,
+    ) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, reqwest::Error> {
+        let mut posts = vec![];
+
+        for page in 1.. {
+            match Self::get_page(id, page).await? {
+                Ok(Self { mut results }) => {
+                    if results.is_empty() {
+                        break;
+                    }
+                    posts.append(&mut results);
+                }
+                Err(errors) => return Ok(Err(errors)),
+            }
+
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+
+        Ok(Ok(posts))
     }
 }
 

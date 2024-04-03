@@ -38,30 +38,6 @@ pub struct Post {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct PostInBoard {
-    pub id: u64,
-    pub authors: Vec<User>,
-    pub board: BoardInPost,
-    #[serde(with = "crate::rfc3339")]
-    pub created_at: DateTime<Utc>,
-    pub description: Option<String>,
-    pub num_replies: u64,
-    pub section: Option<Section>,
-    pub section_order: u64,
-    pub status: String,
-    pub subject: String,
-    #[serde(with = "crate::rfc3339")]
-    pub tagged_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct BoardPageResponse {
-    pub results: Vec<PostInBoard>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct BoardInPost {
     pub id: u64,
     pub name: String,
