@@ -13,8 +13,8 @@ impl Thread {
 }
 
 impl Section {
-    pub fn null() -> Section {
-        return Self { id: 0, name: String::from("Unsectioned Posts"), order: 999 };
+    pub fn null(order: u64) -> Section {
+        return Self { id: 0, name: String::from("Unsectioned Posts"), order: order };
     }
 }
 

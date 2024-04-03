@@ -1,4 +1,4 @@
-mod cover;
+pub mod cover;
 mod transform;
 
 pub mod epub;
@@ -11,7 +11,7 @@ use crate::{
 
 use super::Thread;
 
-const STYLE: &str = include_str!("book.css");
+pub const STYLE: &str = include_str!("book.css");
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Options {
@@ -254,7 +254,7 @@ fn raw_copyright_page(post: &Post) -> String {
     )
 }
 
-fn author_names(authors: &[User]) -> String {
+pub fn author_names(authors: &[User]) -> String {
     let usernames: Vec<_> = authors
         .iter()
         .map(|a| transform::encode_html(&a.username))

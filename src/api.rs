@@ -3,7 +3,7 @@ use std::{future::Future, time::Duration};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
-    types::{Thread, Section, BoardPageResponse, PostInBoard},
+    types::{BoardPageResponse, PostInBoard},
     Board, Post, Reply,
 };
 
@@ -22,25 +22,25 @@ pub struct Replies(pub(crate) Vec<Reply>);
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub struct BoardPosts(pub(crate) Vec<PostInBoard>);
 impl BoardPosts {
-    pub fn board_page_url(board_id: u64, page: u64) -> String {
-        format!("{GLOWFIC_API_V1}/boards/{board_id}/posts?page={page}")
+    pub fn page_url(id: u64, page: u64) -> String {
+        format!("{GLOWFIC_API_V1}/boards/{id}/posts?page={page}")
     }
 
-    pub async fn board_get_page(
-        board_id: u64,
+    pub async fn get_page(
+        id: u64,
         page: u64,
     ) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, reqwest::Error> {
-        match get_glowfic::<BoardPageResponse>(&Self::board_page_url(board_id, page)).await? {
+        match get_glowfic::<BoardPageResponse>(&Self::page_url(id, page)).await? {
             Ok(result) => return Ok(Ok(result.results)),
             Err(errors) => return Ok(Err(errors)),
         }
     }
 
-    pub async fn board_get_all(id: u64) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, reqwest::Error> {
+    pub async fn get_all(id: u64) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, reqwest::Error> {
         let mut posts = vec![];
 
         for page in 1.. {
-            match Self::board_get_page(id, page).await? {
+            match Self::get_page(id, page).await? {
                 Ok(mut inner_posts) => {
                     if inner_posts.is_empty() {
                         break;
@@ -56,12 +56,6 @@ impl BoardPosts {
         Ok(Ok(posts))
     }
 }
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
-pub struct Threads(pub(crate) Vec<Thread>);
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
-pub struct SectionedThreads(pub(crate) Vec<(Section, Vec<Thread>)>);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct GlowficError {

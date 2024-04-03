@@ -109,20 +109,20 @@ impl Thread {
 }
 
 impl Thread {
-    fn to_title_page(&self) -> String {
+    pub fn to_title_page(&self) -> String {
         wrap_xml(
             &self.post.subject,
             &raw_title_page(&self.post, self.replies.len()),
         )
     }
-    fn description_page(&self, options: Options) -> String {
+    pub fn description_page(&self, options: Options) -> String {
         let subject = &self.post.subject;
         wrap_xml(
             &format!("{subject} - Description"),
             &raw_content_page(&[self.post.content_block(options)]),
         )
     }
-    fn reply_pages(&self, options: Options) -> Vec<String> {
+    pub fn reply_pages(&self, options: Options) -> Vec<String> {
         let subject = &self.post.subject;
         let mut pages = vec![];
 
@@ -145,7 +145,7 @@ impl Thread {
     }
 }
 
-fn wrap_xml(subject: &str, content: &str) -> String {
+pub fn wrap_xml(subject: &str, content: &str) -> String {
     let content = transform::html_to_xml(content);
 
     format!(
