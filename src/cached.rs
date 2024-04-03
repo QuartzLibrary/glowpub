@@ -58,8 +58,40 @@ impl Replies {
             if let Ok(data) = std::fs::read(&cache_path) {
                 let parsed: Result<Self, Vec<GlowficError>> =
                     serde_json::from_slice(&data).unwrap();
+
                 if let Ok(replies) = parsed {
                     return Ok(Ok(replies.0));
+                }
+            }
+        }
+
+        let response = Self::get_all(id).await?;
+
+        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
+        write_if_changed(&cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+
+        Ok(response)
+    }
+}
+
+impl BoardPosts {
+    fn cache_key(id: u64) -> PathBuf {
+        format!("{CACHE_ROOT}/boards/{id}/posts.json").into()
+    }
+
+    pub async fn get_all_cached(
+        id: u64,
+        invalidate_cache: bool,
+    ) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, Box<dyn Error>> {
+        let cache_path = Self::cache_key(id);
+
+        if !invalidate_cache {
+            if let Ok(data) = std::fs::read(&cache_path) {
+                let parsed: Result<Vec<PostInBoard>, Vec<GlowficError>> =
+                    serde_json::from_slice(&data).unwrap();
+
+                if let Ok(posts) = parsed {
+                    return Ok(Ok(posts));
                 }
             }
         }
@@ -150,36 +182,6 @@ impl Thread {
                 log::info!("{e:?}");
             }
         }
-    }
-}
-
-impl BoardPosts {
-    fn cache_key(id: u64) -> PathBuf {
-        format!("{CACHE_ROOT}/boards/{id}/posts.json").into()
-    }
-
-    pub async fn get_all_cached(
-        id: u64,
-        invalidate_cache: bool,
-    ) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, Box<dyn Error>> {
-        let cache_path = Self::cache_key(id);
-
-        if !invalidate_cache {
-            if let Ok(data) = std::fs::read(&cache_path) {
-                let parsed: Result<Vec<PostInBoard>, Vec<GlowficError>> =
-                    serde_json::from_slice(&data).unwrap();
-                if let Ok(posts) = parsed {
-                    return Ok(Ok(posts));
-                }
-            }
-        }
-
-        let response = Self::get_all(id).await?;
-
-        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        write_if_changed(&cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
-
-        Ok(response)
     }
 }
 

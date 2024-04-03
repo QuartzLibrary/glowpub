@@ -83,7 +83,7 @@ impl Replies {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BoardPosts {
-    results: Vec<PostInBoard>,
+    pub results: Vec<PostInBoard>,
 }
 /// A subset of [Post].
 ///
