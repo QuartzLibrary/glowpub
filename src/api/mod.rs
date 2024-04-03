@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use std::{future::Future, time::Duration};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};

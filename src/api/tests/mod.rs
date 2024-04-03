@@ -1,24 +1,25 @@
+mod fixture_generation;
+
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 
-use glowpub::{
-    api::{GlowficError, GlowficResponse, Replies},
-    Board, Post,
-};
+use crate::{Board, Post};
+
+use super::{GlowficError, GlowficResponse, Replies};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-const ALL_POSTS: &str = "./tests/fixtures/api-posts.json";
-const OK_POSTS: &str = "./tests/fixtures/api-posts-success.json";
-const ERR_POSTS: &str = "./tests/fixtures/api-posts-error.json";
+const ALL_POSTS: &str = "./src/api/tests/fixtures/api-posts.json";
+const OK_POSTS: &str = "./src/api/tests/fixtures/api-posts-success.json";
+const ERR_POSTS: &str = "./src/api/tests/fixtures/api-posts-error.json";
 
-const ALL_REPLIES: &str = "./tests/fixtures/api-replies.json";
-const OK_REPLIES: &str = "./tests/fixtures/api-replies-success.json";
-const ERR_REPLIES: &str = "./tests/fixtures/api-replies-error.json";
+const ALL_REPLIES: &str = "./src/api/tests/fixtures/api-replies.json";
+const OK_REPLIES: &str = "./src/api/tests/fixtures/api-replies-success.json";
+const ERR_REPLIES: &str = "./src/api/tests/fixtures/api-replies-error.json";
 
-const ALL_BOARDS: &str = "./tests/fixtures/api-boards.json";
-const OK_BOARDS: &str = "./tests/fixtures/api-boards-success.json";
-const ERR_BOARDS: &str = "./tests/fixtures/api-boards-error.json";
+const ALL_BOARDS: &str = "./src/api/tests/fixtures/api-boards.json";
+const OK_BOARDS: &str = "./src/api/tests/fixtures/api-boards-success.json";
+const ERR_BOARDS: &str = "./src/api/tests/fixtures/api-boards-error.json";
 
 type PostResponse = GlowficResponse<Post>;
 type RepliesResponse = GlowficResponse<Replies>;
