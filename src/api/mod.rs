@@ -11,13 +11,10 @@ const GLOWFIC_API_V1: &str = "https://www.glowfic.com/api/v1";
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum GlowficResponse<T> {
+enum GlowficResponse<T> {
     Value(T),
     Error { errors: Vec<GlowficError> },
 }
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
-pub struct Replies(pub(crate) Vec<Reply>);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct GlowficError {
@@ -44,6 +41,8 @@ impl Post {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+pub struct Replies(pub(crate) Vec<Reply>);
 impl Replies {
     pub fn page_url(id: u64, page: u64) -> String {
         format!("{GLOWFIC_API_V1}/posts/{id}/replies?page={page}")
@@ -52,7 +51,7 @@ impl Replies {
     async fn get_page(
         id: u64,
         page: u64,
-    ) -> Result<Result<Vec<Reply>, Vec<GlowficError>>, reqwest::Error> {
+    ) -> Result<Result<Self, Vec<GlowficError>>, reqwest::Error> {
         get_glowfic(&Self::page_url(id, page)).await
     }
 
@@ -61,7 +60,7 @@ impl Replies {
 
         for page in 1.. {
             match Self::get_page(id, page).await? {
-                Ok(mut inner_replies) => {
+                Ok(Self(mut inner_replies)) => {
                     if inner_replies.is_empty() {
                         break;
                     }
@@ -86,11 +85,11 @@ where
     let response = retry(5, || reqwest::get(url)).await?;
     let parsed: GlowficResponse<T> = response.json().await?;
 
-    Ok(parsed.to_result())
+    Ok(parsed.into_result())
 }
 
 impl<T> GlowficResponse<T> {
-    pub fn to_result(self) -> Result<T, Vec<GlowficError>> {
+    fn into_result(self) -> Result<T, Vec<GlowficError>> {
         match self {
             GlowficResponse::Value(value) => Ok(value),
             GlowficResponse::Error { errors } => Err(errors),

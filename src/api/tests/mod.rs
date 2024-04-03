@@ -21,10 +21,6 @@ const ALL_BOARDS: &str = "./src/api/tests/fixtures/api-boards.json";
 const OK_BOARDS: &str = "./src/api/tests/fixtures/api-boards-success.json";
 const ERR_BOARDS: &str = "./src/api/tests/fixtures/api-boards-error.json";
 
-type PostResponse = GlowficResponse<Post>;
-type RepliesResponse = GlowficResponse<Replies>;
-type BoardResponse = GlowficResponse<Board>;
-
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 struct Error {
     errors: Vec<GlowficError>,
@@ -32,15 +28,16 @@ struct Error {
 
 #[tokio::test]
 async fn deserialisation() -> Result<()> {
-    let _posts: Vec<PostResponse> = serde_json::from_str(&read_to_string(ALL_POSTS)?)?;
+    let _posts: Vec<GlowficResponse<Post>> = serde_json::from_str(&read_to_string(ALL_POSTS)?)?;
     let _posts: Vec<Post> = serde_json::from_str(&read_to_string(OK_POSTS)?)?;
     let _posts: Vec<Error> = serde_json::from_str(&read_to_string(ERR_POSTS)?)?;
 
-    let _replies: Vec<RepliesResponse> = serde_json::from_str(&read_to_string(ALL_REPLIES)?)?;
+    let _replies: Vec<GlowficResponse<Replies>> =
+        serde_json::from_str(&read_to_string(ALL_REPLIES)?)?;
     let _replies: Vec<Replies> = serde_json::from_str(&read_to_string(OK_REPLIES)?)?;
     let _replies: Vec<Error> = serde_json::from_str(&read_to_string(ERR_REPLIES)?)?;
 
-    let _boards: Vec<BoardResponse> = serde_json::from_str(&read_to_string(ALL_BOARDS)?)?;
+    let _boards: Vec<GlowficResponse<Board>> = serde_json::from_str(&read_to_string(ALL_BOARDS)?)?;
     let _boards: Vec<Board> = serde_json::from_str(&read_to_string(OK_BOARDS)?)?;
     let _boards: Vec<Error> = serde_json::from_str(&read_to_string(ERR_BOARDS)?)?;
 
