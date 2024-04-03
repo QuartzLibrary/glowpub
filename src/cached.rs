@@ -10,7 +10,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::{
     api::{GlowficError, Replies},
     types::{Icon, Thread},
-    utils::{extension_to_image_mime, mime_to_image_extension, guess_mime},
+    utils::{extension_to_image_mime, guess_image_mime, mime_to_image_extension},
     Board, Post, Reply,
 };
 
@@ -109,18 +109,15 @@ impl Icon {
 
         let (mime, data) = self.retrieve().await?;
 
-        let guessed_mime = match guess_mime(&data, &mime) {
-            Some(new_mime) => new_mime,
-            None => mime,
-        };
+        let mime = guess_image_mime(&data).unwrap_or(mime);
 
-        let extension = mime_to_image_extension(&guessed_mime).ok_or(format!("Invalid mime: {guessed_mime}"))?;
+        let extension = mime_to_image_extension(&mime).ok_or(format!("Invalid mime: {mime}"))?;
 
         let cache_path = Self::cache_key(*id, &extension);
         std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
         write_if_changed(cache_path, &data).unwrap();
 
-        Ok((guessed_mime, data))
+        Ok((mime, data))
     }
 }
 
