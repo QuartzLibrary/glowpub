@@ -18,12 +18,23 @@ struct Args {
     #[clap(long)]
     text_to_speech: bool,
 
-    /// Details tags can be hard to use on e-readers, this option forces them to always seem open.
+    /// <details> tags can be hard to use on e-readers, this option forces them to always seem open.
     ///
-    /// (Under the hood, it replaces the `details` tag with a `blockquote` and `summary` with `p`,
-    /// it also preprends `▼ ` to the `summary` tag to make it similar to an open details tag.)
+    /// (Under the hood, it replaces the <details> tag with a <blockquote>, and <summary> with <p>,
+    /// it also preprends `▼ ` to the <summary> tag to make it similar to an open <details> tag.)
     #[clap(long)]
-    flatten_details: bool,
+    flatten_details: Option<FlattenDetails>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
+enum FlattenDetails {
+    /// The default option. No <details> tags will be flattened.
+    #[default]
+    None,
+    /// All <details> tags will be flattened.
+    All,
+    /// Only <details> tags in epubs will be flattened.
+    Mixed,
 }
 
 #[tokio::main]
@@ -36,11 +47,6 @@ async fn main() {
         text_to_speech,
         flatten_details,
     } = Args::parse();
-
-    let options = Options {
-        text_to_speech,
-        flatten_details,
-    };
 
     log::info!("Downloading post {post_id}");
 
@@ -60,6 +66,14 @@ async fn main() {
     {
         log::info!("Generating html document...");
 
+        let options = Options {
+            text_to_speech,
+            flatten_details: match flatten_details.unwrap_or_default() {
+                FlattenDetails::All => true,
+                FlattenDetails::None | FlattenDetails::Mixed => false,
+            },
+        };
+
         let path = PathBuf::from(format!("./books/html/{post_id}.html"));
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         write_if_changed(path, thread.to_single_html_page(options)).unwrap();
@@ -67,6 +81,14 @@ async fn main() {
 
     {
         log::info!("Generating epub document...");
+
+        let options = Options {
+            text_to_speech,
+            flatten_details: match flatten_details.unwrap_or_default() {
+                FlattenDetails::All | FlattenDetails::Mixed => true,
+                FlattenDetails::None => false,
+            },
+        };
 
         let path = PathBuf::from(format!("./books/epub/{post_id}.epub"));
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
