@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use crate::{Board, Post};
 
-use super::super::Replies;
+use super::super::{BoardPosts, Replies};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -37,14 +37,30 @@ async fn gen_posts_file() -> Result<()> {
 #[ignore]
 async fn gen_replies_file() -> Result<()> {
     let urls: Vec<String> = iter_rng(0..4_000)
-        .take(100)
-        .flat_map(|id| (0..10).map(|page| (id, page)).collect::<Vec<_>>())
+        .take(50)
+        .flat_map(|id| (0..5).map(|page| (id, page)).collect::<Vec<_>>())
         .map(|(id, page)| Replies::page_url(id, page))
         .collect();
 
     let responses: Vec<Value> = to_responses(&urls).await?;
 
     save_to_file(&responses, "replies")?;
+
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore]
+async fn gen_board_posts_file() -> Result<()> {
+    let urls: Vec<String> = iter_rng(0..500)
+        .take(50)
+        .flat_map(|id| (0..5).map(|page| (id, page)).collect::<Vec<_>>())
+        .map(|(id, page)| BoardPosts::page_url(id, page))
+        .collect();
+
+    let responses: Vec<Value> = to_responses(&urls).await?;
+
+    save_to_file(&responses, "board_posts")?;
 
     Ok(())
 }

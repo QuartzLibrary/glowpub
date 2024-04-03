@@ -3,7 +3,7 @@ mod fixture_generation;
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 
-use crate::{Board, Post};
+use crate::{api::BoardPosts, Board, Post};
 
 use super::{GlowficError, GlowficResponse, Replies};
 
@@ -20,6 +20,10 @@ const ERR_REPLIES: &str = "./src/api/tests/fixtures/api-replies-error.json";
 const ALL_BOARDS: &str = "./src/api/tests/fixtures/api-boards.json";
 const OK_BOARDS: &str = "./src/api/tests/fixtures/api-boards-success.json";
 const ERR_BOARDS: &str = "./src/api/tests/fixtures/api-boards-error.json";
+
+const ALL_BOARD_POSTS: &str = "./src/api/tests/fixtures/api-board_posts.json";
+const OK_BOARD_POSTS: &str = "./src/api/tests/fixtures/api-board_posts-success.json";
+const ERR_BOARD_POSTS: &str = "./src/api/tests/fixtures/api-board_posts-error.json";
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 struct Error {
@@ -40,6 +44,11 @@ async fn deserialisation() -> Result<()> {
     let _boards: Vec<GlowficResponse<Board>> = serde_json::from_str(&read_to_string(ALL_BOARDS)?)?;
     let _boards: Vec<Board> = serde_json::from_str(&read_to_string(OK_BOARDS)?)?;
     let _boards: Vec<Error> = serde_json::from_str(&read_to_string(ERR_BOARDS)?)?;
+
+    let _board_posts: Vec<GlowficResponse<BoardPosts>> =
+        serde_json::from_str(&read_to_string(ALL_BOARD_POSTS)?)?;
+    let _board_posts: Vec<BoardPosts> = serde_json::from_str(&read_to_string(OK_BOARD_POSTS)?)?;
+    let _board_posts: Vec<Error> = serde_json::from_str(&read_to_string(ERR_BOARD_POSTS)?)?;
 
     Ok(())
 }
