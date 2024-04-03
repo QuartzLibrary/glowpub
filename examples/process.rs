@@ -1,5 +1,6 @@
 use clap::Parser;
 use std::path::PathBuf;
+use slug::slugify;
 
 use glowpub::{cached::write_if_changed, gen::Options, Thread};
 
@@ -50,6 +51,7 @@ async fn main() {
         .unwrap();
 
     log::info!("Downloaded post {post_id} - {}", &thread.post.subject);
+    let title_slug = slugify(&thread.post.subject);
 
     {
         log::info!("Caching all the icons...");
@@ -60,7 +62,7 @@ async fn main() {
     {
         log::info!("Generating html document...");
 
-        let path = PathBuf::from(format!("./books/html/{post_id}.html"));
+        let path = PathBuf::from(format!("./books/html/glowfic {post_id} - {title_slug}.html"));
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         write_if_changed(path, thread.to_single_html_page(options)).unwrap();
     }
@@ -68,7 +70,7 @@ async fn main() {
     {
         log::info!("Generating epub document...");
 
-        let path = PathBuf::from(format!("./books/epub/{post_id}.epub"));
+        let path = PathBuf::from(format!("./books/epub/glowfic {post_id} - {title_slug}.epub"));
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         write_if_changed(path, thread.to_epub(options).await.unwrap()).unwrap();
     }
