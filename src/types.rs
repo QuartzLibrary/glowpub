@@ -1,10 +1,10 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct Thread {
-    pub post: Post,
-    pub replies: Vec<Reply>,
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)] // Not serialized
+pub struct Continuity {
+    pub board: Board,
+    pub threads: Vec<Thread>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -13,6 +13,20 @@ pub struct Board {
     pub id: i64,
     pub name: String,
     pub board_sections: Vec<Section>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Section {
+    pub id: u64,
+    pub name: String,
+    pub order: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)] // Not serialized
+pub struct Thread {
+    pub post: Post,
+    pub replies: Vec<Reply>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -38,9 +52,32 @@ pub struct Post {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct User {
+    pub id: u64,
+    pub username: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct BoardInPost {
     pub id: u64,
     pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Character {
+    pub id: u64,
+    pub name: String,
+    pub screenname: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Icon {
+    pub id: u64,
+    pub keyword: Option<String>,
+    pub url: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -58,33 +95,52 @@ pub struct Reply {
     pub user: User,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Character {
-    pub id: u64,
-    pub name: String,
-    pub screenname: Option<String>,
-}
+mod helpers {
+    use std::collections::BTreeSet;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Section {
-    pub id: u64,
-    pub name: String,
-    pub order: u64,
-}
+    use super::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct User {
-    pub id: u64,
-    pub username: String,
-}
+    // TODO: can we rely on there always being at least one thread?
+    impl Continuity {
+        pub fn created_at(&self) -> Option<DateTime<Utc>> {
+            self.threads.iter().map(|t| t.post.created_at).min()
+        }
+        pub fn tagged_at(&self) -> Option<DateTime<Utc>> {
+            self.threads.iter().map(|t| t.post.tagged_at).max()
+        }
+        pub fn authors(&self) -> Vec<User> {
+            self.threads
+                .iter()
+                .flat_map(|t| t.post.authors.clone())
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect()
+        }
+        pub fn sections(&self) -> (Vec<(Section, Vec<&Thread>)>, Vec<&Thread>) {
+            let mut sections = self.board.board_sections.clone();
+            sections.sort_by_key(|s| s.order);
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Icon {
-    pub id: u64,
-    pub keyword: Option<String>,
-    pub url: Option<String>,
+            let sections: Vec<(Section, Vec<&Thread>)> = sections
+                .into_iter()
+                .map(|s| {
+                    let mut threads: Vec<&Thread> = self
+                        .threads
+                        .iter()
+                        .filter(|t| t.post.section.as_ref().map(|s| s.id) == Some(s.id))
+                        .collect();
+                    threads.sort_by_key(|t| t.post.section_order);
+                    (s, threads)
+                })
+                .collect();
+
+            let mut sectionless_threads: Vec<&Thread> = self
+                .threads
+                .iter()
+                .filter(|t| t.post.section.is_none())
+                .collect();
+            sectionless_threads.sort_by_key(|t| t.post.section_order);
+
+            (sections, sectionless_threads)
+        }
+    }
 }

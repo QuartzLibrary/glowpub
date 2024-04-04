@@ -10,7 +10,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::{
     api::{BoardPosts, GlowficError, PostInBoard, Replies},
     assets::retrieve_icon,
-    types::{Icon, Thread},
+    types::{Continuity, Icon, Thread},
     utils::{extension_to_image_mime, guess_image_mime, mime_to_image_extension},
     Board, Post, Reply,
 };
@@ -162,7 +162,7 @@ impl Thread {
     pub async fn get_cached(
         id: u64,
         invalidate_cache: bool,
-    ) -> Result<Result<Thread, Vec<GlowficError>>, Box<dyn Error>> {
+    ) -> Result<Result<Self, Vec<GlowficError>>, Box<dyn Error>> {
         let post = match Post::get_cached(id, invalidate_cache).await? {
             Ok(post) => post,
             Err(errors) => return Ok(Err(errors)),
@@ -176,6 +176,44 @@ impl Thread {
     }
     pub async fn cache_all_icons(&self, invalidate_cache: bool) {
         let icons: BTreeSet<_> = self.icons().collect();
+
+        for icon in icons {
+            if let Err(e) = icon.retrieve_cached(invalidate_cache).await {
+                log::info!("{e:?}");
+            }
+        }
+    }
+}
+
+impl Continuity {
+    pub async fn get_cached(
+        id: u64,
+        invalidate_cache: bool,
+    ) -> Result<Result<Self, Vec<GlowficError>>, Box<dyn Error>> {
+        let board = match Board::get_cached(id, invalidate_cache).await? {
+            Ok(board) => board,
+            Err(errors) => return Ok(Err(errors)),
+        };
+        let threads = match BoardPosts::get_all_cached(id, invalidate_cache).await? {
+            Ok(board_posts) => {
+                let mut threads = vec![];
+                for p in board_posts {
+                    log::info!("Downloading post {} - {}", p.id, &p.subject);
+                    let thread = match Thread::get_cached(p.id, invalidate_cache).await? {
+                        Ok(thread) => thread,
+                        Err(e) => return Ok(Err(e)),
+                    };
+                    threads.push(thread);
+                }
+                threads
+            }
+            Err(errors) => return Ok(Err(errors)),
+        };
+
+        Ok(Ok(Self { board, threads }))
+    }
+    pub async fn cache_all_icons(&self, invalidate_cache: bool) {
+        let icons: BTreeSet<_> = self.threads.iter().flat_map(|t| t.icons()).collect();
 
         for icon in icons {
             if let Err(e) = icon.retrieve_cached(invalidate_cache).await {

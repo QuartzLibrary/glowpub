@@ -7,7 +7,7 @@ use std::{
 use mime::Mime;
 
 use crate::{
-    types::{Icon, Thread},
+    types::{Continuity, Icon, Thread},
     utils::mime_to_image_extension,
 };
 
@@ -73,22 +73,41 @@ impl InternedImage {
     }
 }
 
-impl Thread {
-    /// We return [Option<Icon>] so we can clear images with broken links
-    /// (as some readers might not support them).
-    fn icons_mut(&mut self) -> impl Iterator<Item = &mut Icon> {
-        std::iter::once(&mut self.post.icon)
-            .chain(self.replies.iter_mut().map(|r| &mut r.icon))
-            .flatten()
-    }
-
+impl Continuity {
     pub async fn intern_images(
         &mut self,
     ) -> Result<BTreeMap<String, InternedImage>, Box<dyn Error>> {
         let mut interned_images: BTreeMap<String, InternedImage> = BTreeMap::new();
-
         let mut skip: BTreeSet<u64> = BTreeSet::default();
 
+        for thread in &mut self.threads {
+            thread
+                .intern_images_inner(&mut interned_images, &mut skip)
+                .await?;
+        }
+
+        Ok(interned_images)
+    }
+}
+
+impl Thread {
+    pub async fn intern_images(
+        &mut self,
+    ) -> Result<BTreeMap<String, InternedImage>, Box<dyn Error>> {
+        let mut interned_images: BTreeMap<String, InternedImage> = BTreeMap::new();
+        let mut skip: BTreeSet<u64> = BTreeSet::default();
+
+        self.intern_images_inner(&mut interned_images, &mut skip)
+            .await?;
+
+        Ok(interned_images)
+    }
+
+    async fn intern_images_inner(
+        &mut self,
+        interned_images: &mut BTreeMap<String, InternedImage>,
+        skip: &mut BTreeSet<u64>,
+    ) -> Result<(), Box<dyn Error>> {
         for icon in self.icons_mut() {
             if skip.contains(&icon.id) {
                 continue;
@@ -120,7 +139,15 @@ impl Thread {
             interned_images.insert(url, interned);
         }
 
-        Ok(interned_images)
+        Ok(())
+    }
+
+    /// We return [Option<Icon>] so we can clear images with broken links
+    /// (as some readers might not support them).
+    fn icons_mut(&mut self) -> impl Iterator<Item = &mut Icon> {
+        std::iter::once(&mut self.post.icon)
+            .chain(self.replies.iter_mut().map(|r| &mut r.icon))
+            .flatten()
     }
 }
 

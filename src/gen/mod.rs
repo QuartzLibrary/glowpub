@@ -31,10 +31,7 @@ fn raw_title_page(post: &Post, reply_count: usize) -> String {
     } = post;
 
     let author_names = author_names(authors);
-    let author_ids: String = format!(
-        "{:?}",
-        authors.iter().map(|user| user.id).collect::<Vec<_>>()
-    );
+    let author_ids: Vec<u64> = authors.iter().map(|user| user.id).collect();
 
     let BoardInPost {
         id: board_id,
@@ -52,7 +49,7 @@ fn raw_title_page(post: &Post, reply_count: usize) -> String {
 
     <div class="title-page">
         <h1 class="title" post-id="{id}">{subject}</h1>
-        <h2 class="authors" glowfic-ids="{author_ids}">by {author_names}</h2>
+        <h2 class="authors" glowfic-ids="{author_ids:?}">by {author_names}</h2>
         <h3 class="board" board-id="{board_id}">in {board_name}</h3>
         <p class="status">[Status: <a href="https://glowfic.com/posts/{id}">{status}</a>]</p>
         <p class="reply-count">[{reply_count} replies]</p>
