@@ -127,7 +127,7 @@ impl Icon {
                 let files: Vec<_> = glob::glob(blob_path.to_str().unwrap()).unwrap().collect();
 
                 // We expect the blob to ever only match at most 1 file.
-                assert!(files.len() <= 1);
+                assert!(files.len() <= 1, "{files:?}");
 
                 files
             };

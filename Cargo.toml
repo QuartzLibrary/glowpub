@@ -38,6 +38,5 @@ xml5ever = "0.17"
 
 image = { version = "0.25.1", default-features = false, features = ["webp", "png"] }
 
-[dev-dependencies]
 clap = { version = "4.1", features = ["derive"] }
 simple_logger = "4.2"
