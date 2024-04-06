@@ -124,21 +124,35 @@ impl Icon {
         if !invalidate_cache {
             let files: Vec<_> = {
                 let blob_path = Self::cache_key(*id, "*");
-                let files: Vec<_> = glob::glob(blob_path.to_str().unwrap()).unwrap().collect();
-
-                // We expect the blob to ever only match at most 1 file.
-                assert!(files.len() <= 1, "{files:?}");
-
-                files
+                glob::glob(blob_path.to_str().unwrap()).unwrap().collect()
             };
 
-            if let Some(Ok(path)) = files.first() {
-                let data = std::fs::read(path).unwrap();
+            match &*files {
+                // If we find a single file, we are good to go.
+                [Ok(path)] => {
+                    let data = std::fs::read(path).unwrap();
 
-                let extension = path.extension().unwrap().to_str().unwrap();
-                if let Some(mime) = extension_to_image_mime(extension) {
-                    return Ok((mime, data));
+                    let extension = path.extension().unwrap().to_str().unwrap();
+                    if let Some(mime) = extension_to_image_mime(extension) {
+                        return Ok((mime, data));
+                    }
                 }
+
+                // The way we changed the handling of icons with broken mimes could lead to
+                // multiple files for the same icon (but different extensions) being present.
+                // We delete and re-download them.
+                [_one, _two, _rest @ ..] => {
+                    log::debug!("Found multiple files for icon {id}. Cleaning them up. No further action needed.");
+
+                    #[allow(clippy::manual_flatten)] // Flattening [Result]s hides errors.
+                    for file in files {
+                        if let Ok(file) = file {
+                            std::fs::remove_file(file).unwrap();
+                        }
+                    }
+                }
+
+                _ => {}
             }
         }
 
