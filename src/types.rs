@@ -10,7 +10,7 @@ pub struct Continuity {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Board {
-    pub id: i64,
+    pub id: u64,
     pub name: String,
     pub board_sections: Vec<Section>,
 }

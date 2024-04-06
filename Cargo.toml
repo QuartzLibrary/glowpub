@@ -40,3 +40,4 @@ image = { version = "0.25.1", default-features = false, features = ["webp", "png
 
 clap = { version = "4.1", features = ["derive"] }
 simple_logger = "4.2"
+slug = "0.1"

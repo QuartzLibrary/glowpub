@@ -1,7 +1,13 @@
 use clap::Parser;
 use std::path::{Path, PathBuf};
 
-use glowpub::{cached::write_if_changed, gen::Options, types::Continuity, Thread};
+use glowpub::{
+    api::BoardPosts,
+    cached::write_if_changed,
+    gen::Options,
+    types::{Continuity, Section},
+    Board, Thread,
+};
 
 /// Download and process Glowfic posts into epub and html files.
 #[derive(Debug, Parser)]
@@ -105,12 +111,30 @@ async fn main() {
             log::info!("Caching all the icons...");
             thread.cache_all_icons(false).await;
 
-            log::info!("Generating html document...");
-            let path = PathBuf::from(format!("./books/html/{post_id}.html"));
+            let name = {
+                let board = Board::get_cached(thread.post.board.id, !use_cache)
+                    .await
+                    .unwrap()
+                    .unwrap();
+
+                let board_posts = BoardPosts::get_all_cached(board.id, !use_cache)
+                    .await
+                    .unwrap()
+                    .unwrap();
+
+                thread_filename(
+                    &thread,
+                    &board,
+                    board_posts.iter().map(|p| p.section.clone()),
+                )
+            };
+
+            log::info!("Generating html document {name}...");
+            let path = PathBuf::from(format!("./books/html/{name}.html"));
             write(path, thread.to_single_html_page(html_options));
 
-            log::info!("Generating epub document...");
-            let path = PathBuf::from(format!("./books/epub/{post_id}.epub"));
+            log::info!("Generating epub document {name}...");
+            let path = PathBuf::from(format!("./books/epub/{name}.epub"));
             write(path, thread.to_epub(epub_options).await.unwrap());
         }
         Command::Board {
@@ -131,15 +155,19 @@ async fn main() {
             log::info!("Caching all the icons...");
             continuity.cache_all_icons(false).await;
 
-            for thread in continuity.threads {
-                let post_id = thread.post.id;
+            for thread in &continuity.threads {
+                let name = thread_filename(
+                    thread,
+                    &continuity.board,
+                    continuity.threads.iter().map(|t| t.post.section.clone()),
+                );
 
-                log::info!("Generating html document {post_id}...");
-                let path = PathBuf::from(format!("./books/html/{post_id}.html"));
+                log::info!("Generating html document {name}...");
+                let path = PathBuf::from(format!("./books/html/{name}.html"));
                 write(path, thread.to_single_html_page(html_options));
 
-                log::info!("Generating epub document {post_id}...");
-                let path = PathBuf::from(format!("./books/epub/{post_id}.epub"));
+                log::info!("Generating epub document {name}...");
+                let path = PathBuf::from(format!("./books/epub/{name}.epub"));
                 write(path, thread.to_epub(epub_options).await.unwrap());
             }
         }
@@ -161,13 +189,57 @@ async fn main() {
             log::info!("Caching all the icons...");
             continuity.cache_all_icons(false).await;
 
-            log::info!("Generating epub document {board_id}...");
-            let path = PathBuf::from(format!("./books/epub/board_{board_id}.epub"));
+            let name = {
+                let board_id = continuity.board.id;
+                let name = slug::slugify(&continuity.board.name);
+                format!("[{board_id}] {name}")
+            };
+
+            log::info!("Generating epub document {name}...");
+            let path = PathBuf::from(format!("./books/epub/{name}.epub"));
             write(path, continuity.to_epub(epub_options).await.unwrap());
         }
     }
 
     log::info!("Done");
+}
+
+fn thread_filename(
+    thread: &Thread,
+    board: &Board,
+    board_thread_sections: impl Iterator<Item = Option<Section>>,
+) -> String {
+    let board_folder = {
+        let board_id = board.id;
+        let board_name = slug::slugify(&board.name);
+        format!("[{board_id}] {board_name}/")
+    };
+
+    let section_folder = thread
+        .post
+        .section
+        .clone()
+        .map(|Section { id, name, order }| {
+            let width = Ord::max(board.board_sections.len().to_string().len(), 2);
+            format!("Section #{order:0width$} [{id}] {name}/")
+        })
+        .unwrap_or_default();
+
+    let post_name = {
+        let post_id = thread.post.id;
+        let post_subject = slug::slugify(&thread.post.subject);
+        let post_order = {
+            let same_section_count = board_thread_sections
+                .filter(|s| *s == thread.post.section)
+                .count();
+            let width = Ord::max(same_section_count.to_string().len(), 2);
+            let order = thread.post.section_order;
+            format!("{order:0width$}")
+        };
+        format!("#{post_order} [{post_id}] {post_subject}")
+    };
+
+    format!("{board_folder}{section_folder}{post_name}")
 }
 
 pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) {
