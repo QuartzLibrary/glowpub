@@ -65,7 +65,7 @@ pub fn raw_content_page(content_blocks: &[String]) -> String {
         .iter()
         .map(String::as_ref)
         .collect::<Vec<_>>()
-        .join("<hr/>");
+        .join("<hr>");
 
     format!(
         r##"
@@ -142,9 +142,9 @@ fn content_block(
                 }) => {
                     let username = transform::encode_html(username);
                     let author_line = if options.text_to_speech {
-                        format!(r##"{username} <br/>as {character_name}"##)
+                        format!(r##"{username} <br>as {character_name}"##)
                     } else {
-                        format!(r##"{username} <br/>as {character_name} <br/>{screenname}"##)
+                        format!(r##"{username} <br>as {character_name} <br>{screenname}"##)
                     };
 
                     format!(
@@ -159,7 +159,7 @@ fn content_block(
                     let author_line = if options.text_to_speech {
                         character_name.clone()
                     } else {
-                        format!(r##"{character_name} <br/>{screenname}"##)
+                        format!(r##"{character_name} <br>{screenname}"##)
                     };
 
                     format!(
@@ -196,7 +196,7 @@ fn content_block(
                 .unwrap_or_default();
             let url = url.as_ref()?;
             Some(format!(
-                r##"<img src="{url}"{keyword} icon-id="{id}" class="icon"/>"##
+                r##"<img src="{url}"{keyword} icon-id="{id}" class="icon">"##
             ))
         })
         .unwrap_or_default();
