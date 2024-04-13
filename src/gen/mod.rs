@@ -233,10 +233,7 @@ fn raw_copyright_page(post: &Post) -> String {
     } = post;
 
     let author_names = author_names(authors);
-    let author_ids: String = format!(
-        "{:?}",
-        authors.iter().map(|user| user.id).collect::<Vec<_>>()
-    );
+    let author_ids: Vec<u64> = authors.iter().map(|user| user.id).collect();
 
     let BoardInPost {
         id: board_id,
