@@ -195,6 +195,7 @@ fn content_block(
                 .map(|keyword| format!(r#" alt="{keyword}""#))
                 .unwrap_or_default();
             let url = url.as_ref()?;
+            let url = transform::encode_html(url);
             Some(format!(
                 r##"<img src="{url}"{keyword} icon-id="{id}" class="icon">"##
             ))
