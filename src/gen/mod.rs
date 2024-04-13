@@ -51,7 +51,7 @@ fn raw_title_page(post: &Post, reply_count: usize) -> String {
         <h1 post-id="{id}">{subject}</h1>
         <h2 author-ids="{author_ids:?}">by {author_names}</h2>
         <h3 board-id="{board_id}">in {board_name}</h3>
-        <p>[Status: <a href="https://glowfic.com/posts/{id}">{status}</a>]</p>
+        <p>[Status: <a href="https://glowfic.com/posts/{id}" rel="noopener noreferrer">{status}</a>]</p>
         <p>[{reply_count} replies]</p>
         {description}
     </div>
