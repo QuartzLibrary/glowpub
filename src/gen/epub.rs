@@ -1,4 +1,7 @@
-use std::{collections::BTreeSet, error::Error};
+use std::{
+    collections::{BTreeSet, HashMap},
+    error::Error,
+};
 
 use chrono::DateTime;
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
@@ -16,15 +19,18 @@ use super::{
 
 impl Continuity {
     pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        self.clone().as_epub(options).await
-    }
-    async fn as_epub(&mut self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        let interned_images = self.intern_images().await?;
+        let images_to_intern = self.images_to_intern().await?;
 
-        let mut builder = self.core_epub(options)?;
+        let mut builder = self.core_epub(
+            options,
+            &images_to_intern
+                .iter()
+                .map(|(url, img)| (url.clone(), img.name()))
+                .collect(),
+        )?;
 
         // Images
-        for (_, image) in interned_images {
+        for (_, image) in images_to_intern {
             builder.add_resource(image.name(), image.data.as_slice(), image.mime.to_string())?;
         }
 
@@ -35,7 +41,7 @@ impl Continuity {
     }
 
     pub fn to_epub_remote_images(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut builder = self.core_epub(options)?;
+        let mut builder = self.core_epub(options, &HashMap::new())?;
 
         let mut file: Vec<u8> = vec![];
         builder.generate(&mut file)?;
@@ -43,7 +49,11 @@ impl Continuity {
         Ok(file)
     }
 
-    fn core_epub(&self, options: Options) -> Result<EpubBuilder<ZipLibrary>, Box<dyn Error>> {
+    fn core_epub(
+        &self,
+        options: Options,
+        url_map: &HashMap<String, String>,
+    ) -> Result<EpubBuilder<ZipLibrary>, Box<dyn Error>> {
         let mut builder = EpubBuilder::new(ZipLibrary::new()?)?;
 
         let authors: Vec<User> = self.authors();
@@ -73,9 +83,12 @@ impl Continuity {
 
         // Title
         builder.add_content(
-            EpubContent::new("title.xhtml", self.to_title_page().as_bytes())
-                .title("Title")
-                .reftype(ReferenceType::TitlePage),
+            EpubContent::new(
+                "title.xhtml",
+                self.to_title_page(options, url_map).as_bytes(),
+            )
+            .title("Title")
+            .reftype(ReferenceType::TitlePage),
         )?;
 
         // We either have:
@@ -106,7 +119,7 @@ impl Continuity {
                 .add_content(
                     EpubContent::new(
                         format!("{section_path}_title.xhtml"),
-                        section.to_title_page(threads).as_bytes(),
+                        section.to_title_page(threads, options, url_map).as_bytes(),
                     )
                     .title(name)
                     .reftype(ReferenceType::TitlePage)
@@ -115,7 +128,7 @@ impl Continuity {
                 .unwrap();
 
             for thread in threads {
-                thread.include(&section_path, 2, &mut builder, options)?;
+                thread.include(&section_path, 2, &mut builder, options, url_map)?;
             }
         }
 
@@ -125,7 +138,8 @@ impl Continuity {
                 .add_content(
                     EpubContent::new(
                         "sectionless_title.xhtml",
-                        Section::sectionless_title_page(&sectionless_threads).as_bytes(),
+                        Section::sectionless_title_page(&sectionless_threads, options, url_map)
+                            .as_bytes(),
                     )
                     // .title("Sectionless Threads")
                     .reftype(ReferenceType::TitlePage)
@@ -139,14 +153,18 @@ impl Continuity {
                 if sections.is_empty() { 1 } else { 2 },
                 &mut builder,
                 options,
+                url_map,
             )?;
         }
 
         // Copyright
         builder.add_content(
-            EpubContent::new("copyright.xhtml", self.to_copyright_page().as_bytes())
-                .title("Copyright")
-                .reftype(ReferenceType::Copyright),
+            EpubContent::new(
+                "copyright.xhtml",
+                self.to_copyright_page(options, url_map).as_bytes(),
+            )
+            .title("Copyright")
+            .reftype(ReferenceType::Copyright),
         )?;
 
         Ok(builder)
@@ -174,7 +192,7 @@ impl Continuity {
 }
 
 impl Continuity {
-    fn to_title_page(&self) -> String {
+    fn to_title_page(&self, options: Options, url_map: &HashMap<String, String>) -> String {
         let Board { id, name, .. } = &self.board;
 
         let authors = self.authors();
@@ -195,9 +213,9 @@ impl Continuity {
         "##
         );
 
-        wrap_xml(name, &title_page)
+        wrap_xml(name, &title_page, options, url_map)
     }
-    fn to_copyright_page(&self) -> String {
+    fn to_copyright_page(&self, options: Options, url_map: &HashMap<String, String>) -> String {
         let Board { id, name, .. } = &self.board;
 
         let authors = self.authors();
@@ -219,11 +237,16 @@ impl Continuity {
         "##
         );
 
-        wrap_xml(&format!("{name} - Copyright"), &copyright)
+        wrap_xml(&format!("{name} - Copyright"), &copyright, options, url_map)
     }
 }
 impl Section {
-    fn to_title_page(&self, threads: &[&Thread]) -> String {
+    fn to_title_page(
+        &self,
+        threads: &[&Thread],
+        options: Options,
+        url_map: &HashMap<String, String>,
+    ) -> String {
         let Section { id, name, .. } = self;
         let authors: Vec<User> = threads
             .iter()
@@ -247,9 +270,13 @@ impl Section {
         "##
         );
 
-        wrap_xml(name, &title_page)
+        wrap_xml(name, &title_page, options, url_map)
     }
-    fn sectionless_title_page(threads: &[&Thread]) -> String {
+    fn sectionless_title_page(
+        threads: &[&Thread],
+        options: Options,
+        url_map: &HashMap<String, String>,
+    ) -> String {
         let name = "Unsectioned Posts";
         let authors: Vec<User> = threads
             .iter()
@@ -273,7 +300,7 @@ impl Section {
         "##
         );
 
-        wrap_xml(name, &title_page)
+        wrap_xml(name, &title_page, options, url_map)
     }
 }
 impl Thread {
@@ -283,6 +310,7 @@ impl Thread {
         base_level: i32,
         builder: &mut EpubBuilder<ZipLibrary>,
         options: Options,
+        url_map: &HashMap<String, String>,
     ) -> Result<(), Box<dyn Error>> {
         let Post { id: post_id, .. } = self.post;
 
@@ -293,7 +321,7 @@ impl Thread {
             .add_content(
                 EpubContent::new(
                     format!("{prefix}_{post_path}_title.xhtml"),
-                    self.to_title_page().as_bytes(),
+                    self.to_title_page(options, url_map).as_bytes(),
                 )
                 .title(&self.post.subject)
                 .reftype(ReferenceType::TitlePage)
@@ -306,7 +334,7 @@ impl Thread {
             .add_content(
                 EpubContent::new(
                     format!("{prefix}_{post_path}_description.xhtml"),
-                    self.description_page(options).as_bytes(),
+                    self.description_page(options, url_map).as_bytes(),
                 )
                 // .title("Description") // No title to avoid cluttering the table of contents.
                 .reftype(ReferenceType::Preface)
@@ -315,7 +343,7 @@ impl Thread {
             .unwrap();
 
         // Parts
-        for (i, reply_page) in self.reply_pages(options).iter().enumerate() {
+        for (i, reply_page) in self.reply_pages(options, url_map).iter().enumerate() {
             builder
                 .add_content(
                     EpubContent::new(
@@ -335,15 +363,18 @@ impl Thread {
 
 impl Thread {
     pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        self.clone().as_epub(options).await
-    }
-    async fn as_epub(&mut self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        let interned_images = self.intern_images().await?;
+        let images_to_intern = self.images_to_intern().await?;
 
-        let mut builder = self.core_epub(options)?;
+        let mut builder = self.core_epub(
+            options,
+            &images_to_intern
+                .iter()
+                .map(|(url, img)| (url.clone(), img.name()))
+                .collect(),
+        )?;
 
         // Images
-        for (_, image) in interned_images {
+        for (_, image) in images_to_intern {
             builder.add_resource(image.name(), image.data.as_slice(), image.mime.to_string())?;
         }
 
@@ -354,7 +385,7 @@ impl Thread {
     }
 
     pub fn to_epub_remote_images(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut builder = self.core_epub(options)?;
+        let mut builder = self.core_epub(options, &HashMap::new())?;
 
         let mut file: Vec<u8> = vec![];
         builder.generate(&mut file)?;
@@ -362,7 +393,11 @@ impl Thread {
         Ok(file)
     }
 
-    fn core_epub(&self, options: Options) -> Result<EpubBuilder<ZipLibrary>, Box<dyn Error>> {
+    fn core_epub(
+        &self,
+        options: Options,
+        url_map: &HashMap<String, String>,
+    ) -> Result<EpubBuilder<ZipLibrary>, Box<dyn Error>> {
         let mut builder = EpubBuilder::new(ZipLibrary::new()?)?;
 
         // Metadata
@@ -386,16 +421,19 @@ impl Thread {
 
         // Title
         builder.add_content(
-            EpubContent::new("title.xhtml", self.to_title_page().as_bytes())
-                .title("Title")
-                .reftype(ReferenceType::TitlePage),
+            EpubContent::new(
+                "title.xhtml",
+                self.to_title_page(options, url_map).as_bytes(),
+            )
+            .title("Title")
+            .reftype(ReferenceType::TitlePage),
         )?;
 
         // Description
         builder.add_content(
             EpubContent::new(
                 "description.xhtml",
-                self.description_page(options).as_bytes(),
+                self.description_page(options, url_map).as_bytes(),
             )
             .title("Description")
             .reftype(ReferenceType::Preface)
@@ -403,7 +441,7 @@ impl Thread {
         )?;
 
         // Parts
-        for (i, reply_page) in self.reply_pages(options).iter().enumerate() {
+        for (i, reply_page) in self.reply_pages(options, url_map).iter().enumerate() {
             builder.add_content(
                 EpubContent::new(format!("part_{i}.xhtml"), reply_page.as_bytes())
                     .title(format!("Part {i}"))
@@ -414,9 +452,12 @@ impl Thread {
 
         // Copyright
         builder.add_content(
-            EpubContent::new("copyright.xhtml", self.to_copyright_page().as_bytes())
-                .title("Copyright")
-                .reftype(ReferenceType::Copyright),
+            EpubContent::new(
+                "copyright.xhtml",
+                self.to_copyright_page(options, url_map).as_bytes(),
+            )
+            .title("Copyright")
+            .reftype(ReferenceType::Copyright),
         )?;
 
         Ok(builder)
@@ -436,20 +477,24 @@ impl Thread {
 }
 
 impl Thread {
-    fn to_title_page(&self) -> String {
+    fn to_title_page(&self, options: Options, url_map: &HashMap<String, String>) -> String {
         wrap_xml(
             &self.post.subject,
             &raw_title_page(&self.post, self.replies.len()),
+            options,
+            url_map,
         )
     }
-    fn description_page(&self, options: Options) -> String {
+    fn description_page(&self, options: Options, url_map: &HashMap<String, String>) -> String {
         let subject = &self.post.subject;
         wrap_xml(
             &format!("{subject} - Description"),
             &raw_content_page(&[self.post.content_block(options)]),
+            options,
+            url_map,
         )
     }
-    fn reply_pages(&self, options: Options) -> Vec<String> {
+    fn reply_pages(&self, options: Options, url_map: &HashMap<String, String>) -> Vec<String> {
         let subject = &self.post.subject;
         let mut pages = vec![];
 
@@ -462,22 +507,33 @@ impl Thread {
             pages.push(wrap_xml(
                 &format!("{subject} - Section {i}"),
                 &raw_content_page(chunk),
+                options,
+                url_map,
             ));
         }
 
         pages
     }
-    fn to_copyright_page(&self) -> String {
+    fn to_copyright_page(&self, options: Options, url_map: &HashMap<String, String>) -> String {
         let subject = &self.post.subject;
         wrap_xml(
             &format!("{subject} - Copyright"),
             &raw_copyright_page(&self.post),
+            options,
+            url_map,
         )
     }
 }
 
-fn wrap_xml(subject: &str, content: &str) -> String {
-    let content = transform::html_to_xml(content);
+fn wrap_xml(
+    subject: &str,
+    content: &str,
+    options: Options,
+    url_map: &HashMap<String, String>,
+) -> String {
+    let subject = transform::escape_html(subject);
+    let content = super::process_content(content, options, url_map); // We process the content before it is turned into xml.
+    let content = transform::html_to_xml(&content);
 
     format!(
         r##"<?xml version='1.0' encoding='utf-8'?>

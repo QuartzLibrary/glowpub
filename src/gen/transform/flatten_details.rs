@@ -1,11 +1,10 @@
 use std::borrow::Cow;
 
 use lol_html::{
-    errors::RewritingError, html_content::ContentType, rewrite_str, ElementContentHandlers,
-    RewriteStrSettings,
+    html_content::ContentType, rewrite_str, ElementContentHandlers, RewriteStrSettings,
 };
 
-pub fn flatten_details(content: &str) -> Result<String, RewritingError> {
+pub fn flatten_details(content: &str) -> String {
     rewrite_str(
         content,
         RewriteStrSettings {
@@ -29,4 +28,5 @@ pub fn flatten_details(content: &str) -> Result<String, RewritingError> {
             ..RewriteStrSettings::default()
         },
     )
+    .unwrap()
 }

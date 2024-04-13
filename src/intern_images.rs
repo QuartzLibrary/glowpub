@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{HashMap, HashSet},
     error::Error,
     io::Cursor,
 };
@@ -57,32 +57,30 @@ impl InternedImage {
         let id = self.id;
         let original_url = self.original_url.clone();
 
-        let mut png_data = Vec::with_capacity(self.data.len());
+        let mut data = Vec::with_capacity(self.data.len());
 
         self.to_dynamic_image()
             .unwrap()
-            .write_to(&mut Cursor::new(&mut png_data), image::ImageFormat::Png)
+            .write_to(&mut Cursor::new(&mut data), image::ImageFormat::Png)
             .unwrap();
 
         Self {
             id,
             original_url,
             mime: mime::IMAGE_PNG,
-            data: png_data,
+            data,
         }
     }
 }
 
 impl Continuity {
-    pub async fn intern_images(
-        &mut self,
-    ) -> Result<BTreeMap<String, InternedImage>, Box<dyn Error>> {
-        let mut interned_images: BTreeMap<String, InternedImage> = BTreeMap::new();
-        let mut skip: BTreeSet<u64> = BTreeSet::default();
+    pub async fn images_to_intern(&self) -> Result<HashMap<String, InternedImage>, Box<dyn Error>> {
+        let mut interned_images: HashMap<String, InternedImage> = HashMap::new();
+        let mut skip: HashSet<u64> = HashSet::default();
 
-        for thread in &mut self.threads {
+        for thread in &self.threads {
             thread
-                .intern_images_inner(&mut interned_images, &mut skip)
+                .images_to_intern_inner(&mut interned_images, &mut skip)
                 .await?;
         }
 
@@ -91,39 +89,32 @@ impl Continuity {
 }
 
 impl Thread {
-    pub async fn intern_images(
-        &mut self,
-    ) -> Result<BTreeMap<String, InternedImage>, Box<dyn Error>> {
-        let mut interned_images: BTreeMap<String, InternedImage> = BTreeMap::new();
-        let mut skip: BTreeSet<u64> = BTreeSet::default();
+    pub async fn images_to_intern(&self) -> Result<HashMap<String, InternedImage>, Box<dyn Error>> {
+        let mut interned_images: HashMap<String, InternedImage> = HashMap::new();
+        let mut skip: HashSet<u64> = HashSet::default();
 
-        self.intern_images_inner(&mut interned_images, &mut skip)
+        self.images_to_intern_inner(&mut interned_images, &mut skip)
             .await?;
 
         Ok(interned_images)
     }
 
-    async fn intern_images_inner(
-        &mut self,
-        interned_images: &mut BTreeMap<String, InternedImage>,
-        skip: &mut BTreeSet<u64>,
+    async fn images_to_intern_inner(
+        &self,
+        interned_images: &mut HashMap<String, InternedImage>,
+        skip: &mut HashSet<u64>,
     ) -> Result<(), Box<dyn Error>> {
-        for icon in self.icons_mut() {
-            if skip.contains(&icon.id) {
-                continue;
-            }
-
+        for icon in self.icons() {
             let Some(url) = icon.url.clone() else {
                 continue;
             };
 
-            if let Some(interned) = interned_images.get(&url) {
-                icon.url = Some(interned.name());
+            if skip.contains(&icon.id) || interned_images.contains_key(&url) {
                 continue;
             }
 
-            let interned = match icon.intern().await {
-                Ok(interned) => interned.into_common_format(),
+            match icon.intern().await {
+                Ok(interned) => interned_images.insert(url, interned.into_common_format()),
                 Err(e) => {
                     let id = icon.id;
                     log::info!(
@@ -134,20 +125,9 @@ impl Thread {
                     continue;
                 }
             };
-
-            icon.url = Some(interned.name());
-            interned_images.insert(url, interned);
         }
 
         Ok(())
-    }
-
-    /// We return [Option<Icon>] so we can clear images with broken links
-    /// (as some readers might not support them).
-    fn icons_mut(&mut self) -> impl Iterator<Item = &mut Icon> {
-        std::iter::once(&mut self.post.icon)
-            .chain(self.replies.iter_mut().map(|r| &mut r.icon))
-            .flatten()
     }
 }
 
