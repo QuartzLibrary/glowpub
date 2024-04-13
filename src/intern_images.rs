@@ -7,13 +7,15 @@ use std::{
 use mime::Mime;
 
 use crate::{
+    cached::download_cached_image,
     types::{Continuity, Icon, Thread},
-    utils::mime_to_image_extension,
+    utils::{mime_to_image_extension, url_hash},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InternedImage {
-    pub id: usize,
+    /// [None] means it was not an icon but an inline url.
+    pub id: Option<usize>,
     pub original_url: String,
     pub mime: Mime,
     pub data: Vec<u8>,
@@ -24,8 +26,14 @@ impl InternedImage {
 
         let extension = mime_to_image_extension(mime).expect("interned image should be image");
 
-        // `glowfic_` is to ensure epub ids start with a letter.
-        format!("glowfic_{id}.{extension}")
+        // Note: epub file names should start with a letter for maximum compatibility.
+        match id {
+            Some(id) => format!("glowfic_{id}.{extension}"),
+            None => {
+                let url_hash = url_hash(&self.original_url);
+                format!("hash_{url_hash}.{extension}")
+            }
+        }
     }
     /// Converts some image formats into more widely supported ones for epub compatibility.
     pub fn into_common_format(self) -> Self {
@@ -76,11 +84,15 @@ impl InternedImage {
 impl Continuity {
     pub async fn images_to_intern(&self) -> Result<HashMap<String, InternedImage>, Box<dyn Error>> {
         let mut interned_images: HashMap<String, InternedImage> = HashMap::new();
-        let mut skip: HashSet<u64> = HashSet::default();
+        let mut skip: HashSet<String> = HashSet::default();
 
         for thread in &self.threads {
             thread
-                .images_to_intern_inner(&mut interned_images, &mut skip)
+                .icons_to_intern(&mut interned_images, &mut skip)
+                .await?;
+
+            thread
+                .image_tags_to_intern(&mut interned_images, &mut skip)
                 .await?;
         }
 
@@ -91,25 +103,28 @@ impl Continuity {
 impl Thread {
     pub async fn images_to_intern(&self) -> Result<HashMap<String, InternedImage>, Box<dyn Error>> {
         let mut interned_images: HashMap<String, InternedImage> = HashMap::new();
-        let mut skip: HashSet<u64> = HashSet::default();
+        let mut skip: HashSet<String> = HashSet::default();
 
-        self.images_to_intern_inner(&mut interned_images, &mut skip)
+        self.icons_to_intern(&mut interned_images, &mut skip)
+            .await?;
+
+        self.image_tags_to_intern(&mut interned_images, &mut skip)
             .await?;
 
         Ok(interned_images)
     }
 
-    async fn images_to_intern_inner(
+    async fn icons_to_intern(
         &self,
         interned_images: &mut HashMap<String, InternedImage>,
-        skip: &mut HashSet<u64>,
+        skip: &mut HashSet<String>,
     ) -> Result<(), Box<dyn Error>> {
         for icon in self.icons() {
             let Some(url) = icon.url.clone() else {
                 continue;
             };
 
-            if skip.contains(&icon.id) || interned_images.contains_key(&url) {
+            if skip.contains(&url) || interned_images.contains_key(&url) {
                 continue;
             }
 
@@ -118,13 +133,48 @@ impl Thread {
                 Err(e) => {
                     let id = icon.id;
                     log::info!(
-                        "Was unable to retrieve icon {id}, the original url will be inlined."
+                        "Was unable to retrieve icon {id}, the original url will be inlined (url: {url}).\n{e:?}"
                     );
-                    log::info!("{e:?}");
-                    skip.insert(icon.id);
+                    skip.insert(url);
                     continue;
                 }
             };
+        }
+
+        Ok(())
+    }
+
+    async fn image_tags_to_intern(
+        &self,
+        interned_images: &mut HashMap<String, InternedImage>,
+        skip: &mut HashSet<String>,
+    ) -> Result<(), Box<dyn Error>> {
+        for url in self.image_urls() {
+            if skip.contains(&url) || interned_images.contains_key(&url) {
+                continue;
+            }
+
+            match download_cached_image(&url, false).await {
+                Ok((mime, data)) => {
+                    interned_images.insert(
+                        url.clone(),
+                        InternedImage {
+                            id: None,
+                            original_url: url,
+                            mime,
+                            data,
+                        }
+                        .into_common_format(),
+                    );
+                }
+                Err(e) => {
+                    log::info!(
+                        "Was unable to retrieve image, the original url will be inlined (url: {url}).\n{e:?}"
+                    );
+                    skip.insert(url);
+                    continue;
+                }
+            }
         }
 
         Ok(())
@@ -133,9 +183,9 @@ impl Thread {
 
 impl Icon {
     async fn intern(&self) -> Result<InternedImage, Box<dyn Error>> {
-        let (mime, data) = self.retrieve_cached(false).await?;
+        let (mime, data) = self.download_cached(false).await?;
         Ok(InternedImage {
-            id: self.id.try_into().unwrap(),
+            id: Some(self.id.try_into().unwrap()),
             original_url: self.url.clone().unwrap(),
             mime,
             data,

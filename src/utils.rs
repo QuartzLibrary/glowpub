@@ -2,6 +2,7 @@ use std::{io::Cursor, str::FromStr};
 
 use image::io::Reader;
 use mime::Mime;
+use sha2::{Digest, Sha256};
 
 use crate::types::{Icon, Thread};
 
@@ -47,4 +48,11 @@ pub fn extension_to_image_mime(extension: &str) -> Option<Mime> {
         "webp" => Some(Mime::from_str("image/webp").unwrap()),
         _ => None,
     }
+}
+
+pub fn url_hash(url: &str) -> String {
+    let hash: [u8; 32] = Sha256::digest(url).into();
+    let hash: [u8; 16] = hash[..16].try_into().unwrap();
+    let hash = u128::from_be_bytes(hash);
+    format!("{hash:x}")
 }

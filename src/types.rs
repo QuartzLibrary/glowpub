@@ -96,7 +96,12 @@ pub struct Reply {
 }
 
 mod helpers {
-    use std::collections::BTreeSet;
+    use std::{
+        collections::{BTreeSet, HashSet},
+        iter,
+    };
+
+    use crate::gen::transform;
 
     use super::*;
 
@@ -141,6 +146,23 @@ mod helpers {
             sectionless_threads.sort_by_key(|t| t.post.section_order);
 
             (sections, sectionless_threads)
+        }
+    }
+    impl Thread {
+        pub fn image_urls(&self) -> HashSet<String> {
+            let contents = iter::once(&self.post.content)
+                .chain(&self.post.description)
+                .chain(self.replies.iter().map(|r| &r.content));
+
+            let mut urls = HashSet::new();
+            for c in contents {
+                transform::edit_image_urls(c, |url| {
+                    urls.insert(url.clone());
+                    url
+                });
+            }
+
+            urls
         }
     }
 }

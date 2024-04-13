@@ -1,8 +1,8 @@
 mod cover;
-mod transform;
 
 pub mod epub;
 pub mod html;
+pub mod transform;
 
 use std::collections::HashMap;
 
