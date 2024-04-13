@@ -48,11 +48,11 @@ fn raw_title_page(post: &Post, reply_count: usize) -> String {
         r##"
 
     <div class="title-page">
-        <h1 class="title" post-id="{id}">{subject}</h1>
-        <h2 class="authors" glowfic-ids="{author_ids:?}">by {author_names}</h2>
-        <h3 class="board" board-id="{board_id}">in {board_name}</h3>
-        <p class="status">[Status: <a href="https://glowfic.com/posts/{id}">{status}</a>]</p>
-        <p class="reply-count">[{reply_count} replies]</p>
+        <h1 post-id="{id}">{subject}</h1>
+        <h2 author-ids="{author_ids:?}">by {author_names}</h2>
+        <h3 board-id="{board_id}">in {board_name}</h3>
+        <p>[Status: <a href="https://glowfic.com/posts/{id}">{status}</a>]</p>
+        <p>[{reply_count} replies]</p>
         {description}
     </div>
 
@@ -196,7 +196,7 @@ fn content_block(
                 .unwrap_or_default();
             let url = url.as_ref()?;
             Some(format!(
-                r##"<img src="{url}"{keyword} glowfic-id="{id}" class="icon"/>"##
+                r##"<img src="{url}"{keyword} icon-id="{id}" class="icon"/>"##
             ))
         })
         .unwrap_or_default();
@@ -247,9 +247,9 @@ fn raw_copyright_page(post: &Post) -> String {
 
     <div class="copyright-page">
         <h3>This was</h3>
-        <h1 class="title" post-id="{id}">{subject}</h1>
-        <h2 class="authors" glowfic-ids="{author_ids}">by {author_names}</h2>
-        <h3 class="board" board-id="{board_id}">in {board_name}</h3>
+        <h1 post-id="{id}">{subject}</h1>
+        <h2 author-ids="{author_ids:?}">by {author_names}</h2>
+        <h3 board-id="{board_id}">in {board_name}</h3>
 
         © {author_names}
     </div>

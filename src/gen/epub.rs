@@ -187,9 +187,9 @@ impl Continuity {
             r##"
 
         <div class="title-page">
-            <h1 class="title" board-id="{id}">{name}</h1>
-            <h2 class="authors" glowfic-ids="{author_ids:?}">by {author_names}</h2>
-            <p class="thread-count">[{thread_count} threads]</p>
+            <h1 board-id="{id}">{name}</h1>
+            <h2 glowfic-ids="{author_ids:?}">by {author_names}</h2>
+            <p>[{thread_count} threads]</p>
         </div>
 
         "##
@@ -209,8 +209,8 @@ impl Continuity {
     
         <div class="copyright-page">
             <h3>This was</h3>
-            <h1 class="title" board-id="{id}">{name}</h1>
-            <h2 class="authors" glowfic-ids="{author_ids:?}">by {author_names}</h2>
+            <h1 board-id="{id}">{name}</h1>
+            <h2 glowfic-ids="{author_ids:?}">by {author_names}</h2>
             <h3 class="board" board-id="{id}">in {name}</h3>
     
             © {author_names}
@@ -239,9 +239,9 @@ impl Section {
             r##"
     
         <div class="title-page">
-            <h1 class="title" section-id="{id}">{name}</h1>
-            <h2 class="authors" glowfic-ids="{author_ids:?}">by {author_names}</h2>
-            <p class="thread-count">[{thread_count} threads]</p>
+            <h1 section-id="{id}">{name}</h1>
+            <h2 glowfic-ids="{author_ids:?}">by {author_names}</h2>
+            <p>[{thread_count} threads]</p>
         </div>
     
         "##
@@ -265,9 +265,9 @@ impl Section {
             r##"
     
         <div class="title-page">
-            <h1 class="title">{name}</h1>
-            <h2 class="authors" glowfic-ids="{author_ids:?}">by {author_names}</h2>
-            <p class="thread-count">[{thread_count} threads]</p>
+            <h1>{name}</h1>
+            <h2 glowfic-ids="{author_ids:?}">by {author_names}</h2>
+            <p>[{thread_count} threads]</p>
         </div>
     
         "##
