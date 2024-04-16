@@ -1,12 +1,337 @@
-use std::error::Error;
+use std::{collections::BTreeSet, error::Error};
 
+use chrono::DateTime;
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
 use rand::{Rng, SeedableRng};
 use uuid::Uuid;
 
-use crate::{Reply, Thread};
+use crate::{
+    types::{Continuity, Section, User},
+    Board, Post, Reply, Thread,
+};
 
-use super::{raw_content_page, raw_copyright_page, raw_title_page, transform, Options, STYLE};
+use super::{
+    author_names, raw_content_page, raw_copyright_page, raw_title_page, transform, Options, STYLE,
+};
+
+impl Continuity {
+    pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
+        self.clone().as_epub(options).await
+    }
+    async fn as_epub(&mut self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
+        let interned_images = self.intern_images().await?;
+
+        let mut builder = self.core_epub(options)?;
+
+        // Images
+        for (_, image) in interned_images {
+            builder.add_resource(image.name(), image.data.as_slice(), image.mime.to_string())?;
+        }
+
+        let mut file: Vec<u8> = vec![];
+        builder.generate(&mut file)?;
+
+        Ok(file)
+    }
+
+    pub fn to_epub_remote_images(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
+        let mut builder = self.core_epub(options)?;
+
+        let mut file: Vec<u8> = vec![];
+        builder.generate(&mut file)?;
+
+        Ok(file)
+    }
+
+    fn core_epub(&self, options: Options) -> Result<EpubBuilder<ZipLibrary>, Box<dyn Error>> {
+        let mut builder = EpubBuilder::new(ZipLibrary::new()?)?;
+
+        let authors: Vec<User> = self.authors();
+
+        // Metadata
+        for author in &authors {
+            builder.metadata("author", &author.username)?;
+        }
+        builder.metadata("title", &self.board.name)?;
+        if let Some(created_at) = self.created_at() {
+            builder.set_publication_date(created_at);
+        }
+        if let Some(tagged_at) = self.tagged_at() {
+            builder.set_modified_date(tagged_at);
+        }
+        builder.set_uuid(self.uuid());
+
+        // CSS
+        builder.stylesheet(STYLE.as_bytes())?;
+
+        // Cover Image
+        builder.add_cover_image(
+            "cover.png",
+            super::cover::image(&self.board.name, &authors).as_slice(),
+            mime::IMAGE_PNG.to_string(),
+        )?;
+
+        // Title
+        builder.add_content(
+            EpubContent::new("title.xhtml", self.to_title_page().as_bytes())
+                .title("Title")
+                .reftype(ReferenceType::TitlePage),
+        )?;
+
+        // We either have:
+        // - Book
+        //   -Board (level 0)
+        //     - Section (level 1)
+        //       - Post/Thread (level 2)
+        //         - Reply chunk (level 3)
+        //     - Sectionless [optional]
+        //       - Post/Thread (level 2)
+        //         - Reply chunk (level 3)
+        // Or
+        // - Book
+        //   -Board (level 0)
+        //     -Sectionless [invisible]
+        //     - Post/Thread (level 1)
+        //       - Reply chunk (level 2)
+
+        let (sections, sectionless_threads) = self.sections();
+
+        for (section, threads) in &sections {
+            let Section { id, name, .. } = section;
+
+            let section_path = format!("section_{id}");
+
+            // Section intro
+            builder
+                .add_content(
+                    EpubContent::new(
+                        format!("{section_path}_title.xhtml"),
+                        section.to_title_page(threads).as_bytes(),
+                    )
+                    .title(name)
+                    .reftype(ReferenceType::TitlePage)
+                    .level(1),
+                )
+                .unwrap();
+
+            for thread in threads {
+                thread.include(&section_path, 2, &mut builder, options)?;
+            }
+        }
+
+        if !sectionless_threads.is_empty() && !sections.is_empty() {
+            // Sectionless intro
+            builder
+                .add_content(
+                    EpubContent::new(
+                        "sectionless_title.xhtml",
+                        Section::sectionless_title_page(&sectionless_threads).as_bytes(),
+                    )
+                    // .title("Sectionless Threads")
+                    .reftype(ReferenceType::TitlePage)
+                    .level(1),
+                )
+                .unwrap();
+        }
+        for thread in sectionless_threads {
+            thread.include(
+                "sectionless",
+                if sections.is_empty() { 1 } else { 2 },
+                &mut builder,
+                options,
+            )?;
+        }
+
+        // Copyright
+        builder.add_content(
+            EpubContent::new("copyright.xhtml", self.to_copyright_page().as_bytes())
+                .title("Copyright")
+                .reftype(ReferenceType::Copyright),
+        )?;
+
+        Ok(builder)
+    }
+
+    fn uuid(&self) -> Uuid {
+        let seed: [[u8; 8]; 4] = [
+            *b"glowfic!",
+            self.board.id.to_be_bytes(),
+            self.created_at()
+                .as_ref()
+                .map(DateTime::timestamp)
+                .unwrap_or(0)
+                .to_be_bytes(),
+            self.tagged_at()
+                .as_ref()
+                .map(DateTime::timestamp)
+                .unwrap_or(0)
+                .to_be_bytes(),
+        ];
+        let seed: Vec<_> = seed.iter().flatten().copied().collect();
+        let uuid = rand::rngs::StdRng::from_seed(seed.try_into().unwrap()).gen();
+        Uuid::from_u128(uuid)
+    }
+}
+
+impl Continuity {
+    fn to_title_page(&self) -> String {
+        let Board { id, name, .. } = &self.board;
+
+        let authors = self.authors();
+        let author_names = author_names(&authors);
+        let author_ids: Vec<u64> = authors.iter().map(|user| user.id).collect();
+
+        let thread_count = self.threads.len();
+
+        let title_page = format!(
+            r##"
+
+        <div class="title-page">
+            <h1 class="title" board-id="{id}">{name}</h1>
+            <h2 class="authors" glowfic-ids="{author_ids:?}">by {author_names}</h2>
+            <p class="thread-count">[{thread_count} threads]</p>
+        </div>
+
+        "##
+        );
+
+        wrap_xml(name, &title_page)
+    }
+    fn to_copyright_page(&self) -> String {
+        let Board { id, name, .. } = &self.board;
+
+        let authors = self.authors();
+        let author_names = author_names(&authors);
+        let author_ids: Vec<u64> = authors.iter().map(|user| user.id).collect();
+
+        let copyright = format!(
+            r##"
+    
+        <div class="copyright-page">
+            <h3>This was</h3>
+            <h1 class="title" board-id="{id}">{name}</h1>
+            <h2 class="authors" glowfic-ids="{author_ids:?}">by {author_names}</h2>
+            <h3 class="board" board-id="{id}">in {name}</h3>
+    
+            © {author_names}
+        </div>
+    
+        "##
+        );
+
+        wrap_xml(&format!("{name} - Copyright"), &copyright)
+    }
+}
+impl Section {
+    fn to_title_page(&self, threads: &[&Thread]) -> String {
+        let Section { id, name, .. } = self;
+        let authors: Vec<User> = threads
+            .iter()
+            .flat_map(|t| t.post.authors.clone())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect();
+        let author_names = author_names(&authors);
+        let author_ids: Vec<u64> = authors.iter().map(|user| user.id).collect();
+        let thread_count = threads.len();
+
+        let title_page = format!(
+            r##"
+    
+        <div class="title-page">
+            <h1 class="title" section-id="{id}">{name}</h1>
+            <h2 class="authors" glowfic-ids="{author_ids:?}">by {author_names}</h2>
+            <p class="thread-count">[{thread_count} threads]</p>
+        </div>
+    
+        "##
+        );
+
+        wrap_xml(name, &title_page)
+    }
+    fn sectionless_title_page(threads: &[&Thread]) -> String {
+        let name = "Unsectioned Posts";
+        let authors: Vec<User> = threads
+            .iter()
+            .flat_map(|t| t.post.authors.clone())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect();
+        let author_names = author_names(&authors);
+        let author_ids: Vec<u64> = authors.iter().map(|user| user.id).collect();
+        let thread_count = threads.len();
+
+        let title_page = format!(
+            r##"
+    
+        <div class="title-page">
+            <h1 class="title">{name}</h1>
+            <h2 class="authors" glowfic-ids="{author_ids:?}">by {author_names}</h2>
+            <p class="thread-count">[{thread_count} threads]</p>
+        </div>
+    
+        "##
+        );
+
+        wrap_xml(name, &title_page)
+    }
+}
+impl Thread {
+    fn include(
+        &self,
+        prefix: &str,
+        base_level: i32,
+        builder: &mut EpubBuilder<ZipLibrary>,
+        options: Options,
+    ) -> Result<(), Box<dyn Error>> {
+        let Post { id: post_id, .. } = self.post;
+
+        let post_path = format!("post_{post_id}");
+
+        // Post title
+        builder
+            .add_content(
+                EpubContent::new(
+                    format!("{prefix}_{post_path}_title.xhtml"),
+                    self.to_title_page().as_bytes(),
+                )
+                .title(&self.post.subject)
+                .reftype(ReferenceType::TitlePage)
+                .level(base_level),
+            )
+            .unwrap();
+
+        // Description
+        builder
+            .add_content(
+                EpubContent::new(
+                    format!("{prefix}_{post_path}_description.xhtml"),
+                    self.description_page(options).as_bytes(),
+                )
+                // .title("Description") // No title to avoid cluttering the table of contents.
+                .reftype(ReferenceType::Preface)
+                .level(base_level + 1),
+            )
+            .unwrap();
+
+        // Parts
+        for (i, reply_page) in self.reply_pages(options).iter().enumerate() {
+            builder
+                .add_content(
+                    EpubContent::new(
+                        format!("{prefix}_{post_path}_part_{i}.xhtml"),
+                        reply_page.as_bytes(),
+                    )
+                    // .title(format!("Part {i}")) // No title to avoid cluttering the table of contents.
+                    .reftype(ReferenceType::Text)
+                    .level(base_level + 1),
+                )
+                .unwrap();
+        }
+
+        Ok(())
+    }
+}
 
 impl Thread {
     pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
@@ -73,15 +398,17 @@ impl Thread {
                 self.description_page(options).as_bytes(),
             )
             .title("Description")
-            .reftype(ReferenceType::Preface),
+            .reftype(ReferenceType::Preface)
+            .level(1),
         )?;
 
-        // Sections
+        // Parts
         for (i, reply_page) in self.reply_pages(options).iter().enumerate() {
             builder.add_content(
-                EpubContent::new(format!("section_{i}.xhtml"), reply_page.as_bytes())
-                    .title(format!("Section {i}"))
-                    .reftype(ReferenceType::Text),
+                EpubContent::new(format!("part_{i}.xhtml"), reply_page.as_bytes())
+                    .title(format!("Part {i}"))
+                    .reftype(ReferenceType::Text)
+                    .level(1),
             )?;
         }
 
@@ -141,7 +468,11 @@ impl Thread {
         pages
     }
     fn to_copyright_page(&self) -> String {
-        wrap_xml(&self.post.subject, &raw_copyright_page(&self.post))
+        let subject = &self.post.subject;
+        wrap_xml(
+            &format!("{subject} - Copyright"),
+            &raw_copyright_page(&self.post),
+        )
     }
 }
 

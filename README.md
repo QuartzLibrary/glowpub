@@ -5,8 +5,8 @@ Using this software requires [Rust](https://www.rust-lang.org/tools/install).
 ---
 
 To process a specific post clone this repo and, from its directory, run:
-```
-cargo run --example process <post-id>
+```sh
+cargo run -- post <post-id>
 ```
 
 This will download the entire thread and cache it locally, along with all images.
@@ -14,29 +14,35 @@ It'll then generate a single html file in `/books/html/<post-id>.html`, and an e
 
 ---
 
-To process the entire `planecrash` series:
-```
-cargo run --example planecrash
+To process an entire board/continuity:
+```sh
+cargo run -- board <board-id>
 ```
 
-(`planecrash` posts updated on 2022-08-07 from [here](https://glowfic.com/boards/215))
+For example, if you want to download all of [planecrash](https://glowfic.com/boards/215):
+```sh
+cargo run -- board 215
+```
 
 ---
 
 ### Additional options
 
-> Combine these by chaining them after the `--`:
->
-> `cargo run --example planecrash -- --use-cache --text-to-speech`.
+> Combine these by chaining them after the command.
+> 
+> ```sh
+> cargo run -- board 215 --use-cache --text-to-speech --flatten-details=mixed --single-file
+> ```
 
-- To re-use already cached items, add `-- --use-cache` to the end of the command.
+- `--use-cache`: re-use already cached items.
+- `--text-to-speech`: change the output in a way that may be more comfortable for text-to-speech.
+- `--flatten-details`: flatten `details` tags (see example below).
+  Valid values are `--flatten-details=none` (default), `--flatten-details=all`, `--flatten-details=mixed`. `mixed` flattens details in epubs only.
+- `--single-file`: if downloading a board/continuity, output the entire board in a single epub file.
 
-- To change the output in a way that may be more comfortable for text-to-speech, add `-- --text-to-speech` to the end of the command.
+---
 
-- To flatten `details` tags (see example below) use `-- --flatten-details`.
-
-
-With `--flatten-details` this:
+With `flatten-details` enabled this:
 > <details>
 > <summary>This is a summary</summary>
 > This is the hidden content
@@ -48,4 +54,4 @@ Becomes more or less:
 > 
 > This is the hidden content
 
-Note that you can't close the latter, so the inherent spoiler protection is compromised.
+Note that you can't close the latter, so the inherent spoiler protection is compromised, this is mostly useful for ereaders that have trouble with tags.

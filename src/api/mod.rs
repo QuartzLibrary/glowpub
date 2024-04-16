@@ -1,20 +1,24 @@
+#[cfg(test)]
+mod tests;
+
 use std::{future::Future, time::Duration};
 
+use chrono::{DateTime, Utc};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{Board, Post, Reply};
+use crate::{
+    types::{BoardInPost, Section, User},
+    Board, Post, Reply,
+};
 
 const GLOWFIC_API_V1: &str = "https://www.glowfic.com/api/v1";
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum GlowficResponse<T> {
+enum GlowficResponse<T> {
     Value(T),
     Error { errors: Vec<GlowficError> },
 }
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
-pub struct Replies(pub(crate) Vec<Reply>);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct GlowficError {
@@ -41,6 +45,8 @@ impl Post {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+pub struct Replies(pub(crate) Vec<Reply>);
 impl Replies {
     pub fn page_url(id: u64, page: u64) -> String {
         format!("{GLOWFIC_API_V1}/posts/{id}/replies?page={page}")
@@ -49,7 +55,7 @@ impl Replies {
     async fn get_page(
         id: u64,
         page: u64,
-    ) -> Result<Result<Vec<Reply>, Vec<GlowficError>>, reqwest::Error> {
+    ) -> Result<Result<Self, Vec<GlowficError>>, reqwest::Error> {
         get_glowfic(&Self::page_url(id, page)).await
     }
 
@@ -58,7 +64,7 @@ impl Replies {
 
         for page in 1.. {
             match Self::get_page(id, page).await? {
-                Ok(mut inner_replies) => {
+                Ok(Self(mut inner_replies)) => {
                     if inner_replies.is_empty() {
                         break;
                     }
@@ -74,6 +80,67 @@ impl Replies {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BoardPosts {
+    pub results: Vec<PostInBoard>,
+}
+/// A subset of [Post].
+///
+/// Here because it's what this api call uses, but we should normalise it to [Post] everywhere
+/// for simplicity.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PostInBoard {
+    pub id: u64,
+    pub authors: Vec<User>,
+    pub board: BoardInPost,
+    #[serde(with = "crate::rfc3339")]
+    pub created_at: DateTime<Utc>,
+    pub description: Option<String>,
+    pub num_replies: u64,
+    pub section: Option<Section>,
+    pub section_order: u64,
+    pub status: String,
+    pub subject: String,
+    #[serde(with = "crate::rfc3339")]
+    pub tagged_at: DateTime<Utc>,
+}
+impl BoardPosts {
+    pub fn page_url(id: u64, page: u64) -> String {
+        format!("{GLOWFIC_API_V1}/boards/{id}/posts?page={page}")
+    }
+
+    async fn get_page(
+        id: u64,
+        page: u64,
+    ) -> Result<Result<Self, Vec<GlowficError>>, reqwest::Error> {
+        get_glowfic::<Self>(&Self::page_url(id, page)).await
+    }
+
+    pub async fn get_all(
+        id: u64,
+    ) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, reqwest::Error> {
+        let mut posts = vec![];
+
+        for page in 1.. {
+            match Self::get_page(id, page).await? {
+                Ok(Self { mut results }) => {
+                    if results.is_empty() {
+                        break;
+                    }
+                    posts.append(&mut results);
+                }
+                Err(errors) => return Ok(Err(errors)),
+            }
+
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+
+        Ok(Ok(posts))
+    }
+}
+
 pub(crate) async fn get_glowfic<T>(
     url: &str,
 ) -> Result<Result<T, Vec<GlowficError>>, reqwest::Error>
@@ -83,11 +150,11 @@ where
     let response = retry(5, || reqwest::get(url)).await?;
     let parsed: GlowficResponse<T> = response.json().await?;
 
-    Ok(parsed.to_result())
+    Ok(parsed.into_result())
 }
 
 impl<T> GlowficResponse<T> {
-    pub fn to_result(self) -> Result<T, Vec<GlowficError>> {
+    fn into_result(self) -> Result<T, Vec<GlowficError>> {
         match self {
             GlowficResponse::Value(value) => Ok(value),
             GlowficResponse::Error { errors } => Err(errors),

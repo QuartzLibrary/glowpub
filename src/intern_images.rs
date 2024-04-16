@@ -7,7 +7,7 @@ use std::{
 use mime::Mime;
 
 use crate::{
-    types::{Icon, Thread},
+    types::{Continuity, Icon, Thread},
     utils::mime_to_image_extension,
 };
 
@@ -73,28 +73,52 @@ impl InternedImage {
     }
 }
 
-impl Thread {
-    /// We return [Option<Icon>] so we can clear images with broken links
-    /// (as some readers might not support them).
-    fn icons_mut(&mut self) -> impl Iterator<Item = &mut Icon> {
-        std::iter::once(&mut self.post.icon)
-            .chain(self.replies.iter_mut().map(|r| &mut r.icon))
-            .flatten()
-    }
-
+impl Continuity {
     pub async fn intern_images(
         &mut self,
     ) -> Result<BTreeMap<String, InternedImage>, Box<dyn Error>> {
         let mut interned_images: BTreeMap<String, InternedImage> = BTreeMap::new();
-
         let mut skip: BTreeSet<u64> = BTreeSet::default();
 
+        for thread in &mut self.threads {
+            thread
+                .intern_images_inner(&mut interned_images, &mut skip)
+                .await?;
+        }
+
+        Ok(interned_images)
+    }
+}
+
+impl Thread {
+    pub async fn intern_images(
+        &mut self,
+    ) -> Result<BTreeMap<String, InternedImage>, Box<dyn Error>> {
+        let mut interned_images: BTreeMap<String, InternedImage> = BTreeMap::new();
+        let mut skip: BTreeSet<u64> = BTreeSet::default();
+
+        self.intern_images_inner(&mut interned_images, &mut skip)
+            .await?;
+
+        Ok(interned_images)
+    }
+
+    async fn intern_images_inner(
+        &mut self,
+        interned_images: &mut BTreeMap<String, InternedImage>,
+        skip: &mut BTreeSet<u64>,
+    ) -> Result<(), Box<dyn Error>> {
         for icon in self.icons_mut() {
             if skip.contains(&icon.id) {
                 continue;
             }
-            if let Some(interned) = interned_images.get(&icon.url) {
-                icon.url = interned.name();
+
+            let Some(url) = icon.url.clone() else {
+                continue;
+            };
+
+            if let Some(interned) = interned_images.get(&url) {
+                icon.url = Some(interned.name());
                 continue;
             }
 
@@ -111,11 +135,19 @@ impl Thread {
                 }
             };
 
-            icon.url = interned.name();
-            interned_images.insert(icon.url.clone(), interned);
+            icon.url = Some(interned.name());
+            interned_images.insert(url, interned);
         }
 
-        Ok(interned_images)
+        Ok(())
+    }
+
+    /// We return [Option<Icon>] so we can clear images with broken links
+    /// (as some readers might not support them).
+    fn icons_mut(&mut self) -> impl Iterator<Item = &mut Icon> {
+        std::iter::once(&mut self.post.icon)
+            .chain(self.replies.iter_mut().map(|r| &mut r.icon))
+            .flatten()
     }
 }
 
@@ -124,7 +156,7 @@ impl Icon {
         let (mime, data) = self.retrieve_cached(false).await?;
         Ok(InternedImage {
             id: self.id.try_into().unwrap(),
-            original_url: self.url.clone(),
+            original_url: self.url.clone().unwrap(),
             mime,
             data,
         })

@@ -8,8 +8,9 @@ use mime::Mime;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
-    api::{GlowficError, Replies},
-    types::{Icon, Thread},
+    api::{BoardPosts, GlowficError, PostInBoard, Replies},
+    assets::retrieve_icon,
+    types::{Continuity, Icon, Thread},
     utils::{extension_to_image_mime, guess_image_mime, mime_to_image_extension},
     Board, Post, Reply,
 };
@@ -57,8 +58,40 @@ impl Replies {
             if let Ok(data) = std::fs::read(&cache_path) {
                 let parsed: Result<Self, Vec<GlowficError>> =
                     serde_json::from_slice(&data).unwrap();
+
                 if let Ok(replies) = parsed {
                     return Ok(Ok(replies.0));
+                }
+            }
+        }
+
+        let response = Self::get_all(id).await?;
+
+        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
+        write_if_changed(&cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+
+        Ok(response)
+    }
+}
+
+impl BoardPosts {
+    fn cache_key(id: u64) -> PathBuf {
+        format!("{CACHE_ROOT}/boards/{id}/posts.json").into()
+    }
+
+    pub async fn get_all_cached(
+        id: u64,
+        invalidate_cache: bool,
+    ) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, Box<dyn Error>> {
+        let cache_path = Self::cache_key(id);
+
+        if !invalidate_cache {
+            if let Ok(data) = std::fs::read(&cache_path) {
+                let parsed: Result<Vec<PostInBoard>, Vec<GlowficError>> =
+                    serde_json::from_slice(&data).unwrap();
+
+                if let Ok(posts) = parsed {
+                    return Ok(Ok(posts));
                 }
             }
         }
@@ -84,30 +117,48 @@ impl Icon {
     ) -> Result<(Mime, Vec<u8>), Box<dyn Error>> {
         let Self { id, url, .. } = self;
 
+        let Some(url) = url else {
+            return Err("No url provided for this icon".into());
+        };
+
         if !invalidate_cache {
             let files: Vec<_> = {
                 let blob_path = Self::cache_key(*id, "*");
-                let files: Vec<_> = glob::glob(blob_path.to_str().unwrap()).unwrap().collect();
-
-                // We expect the blob to ever only match at most 1 file.
-                assert!(files.len() <= 1);
-
-                files
+                glob::glob(blob_path.to_str().unwrap()).unwrap().collect()
             };
 
-            if let Some(Ok(path)) = files.first() {
-                let data = std::fs::read(path).unwrap();
+            match &*files {
+                // If we find a single file, we are good to go.
+                [Ok(path)] => {
+                    let data = std::fs::read(path).unwrap();
 
-                let extension = path.extension().unwrap().to_str().unwrap();
-                if let Some(mime) = extension_to_image_mime(extension) {
-                    return Ok((mime, data));
+                    let extension = path.extension().unwrap().to_str().unwrap();
+                    if let Some(mime) = extension_to_image_mime(extension) {
+                        return Ok((mime, data));
+                    }
                 }
+
+                // The way we changed the handling of icons with broken mimes could lead to
+                // multiple files for the same icon (but different extensions) being present.
+                // We delete and re-download them.
+                [_one, _two, _rest @ ..] => {
+                    log::debug!("Found multiple files for icon {id}. Cleaning them up. No further action needed.");
+
+                    #[allow(clippy::manual_flatten)] // Flattening [Result]s hides errors.
+                    for file in files {
+                        if let Ok(file) = file {
+                            std::fs::remove_file(file).unwrap();
+                        }
+                    }
+                }
+
+                _ => {}
             }
         }
 
         log::info!("Downloading icon {id} from {url}");
 
-        let (mime, data) = self.retrieve().await?;
+        let (mime, data) = retrieve_icon(url).await?;
 
         let mime = guess_image_mime(&data).unwrap_or(mime);
 
@@ -125,7 +176,7 @@ impl Thread {
     pub async fn get_cached(
         id: u64,
         invalidate_cache: bool,
-    ) -> Result<Result<Thread, Vec<GlowficError>>, Box<dyn Error>> {
+    ) -> Result<Result<Self, Vec<GlowficError>>, Box<dyn Error>> {
         let post = match Post::get_cached(id, invalidate_cache).await? {
             Ok(post) => post,
             Err(errors) => return Ok(Err(errors)),
@@ -139,6 +190,44 @@ impl Thread {
     }
     pub async fn cache_all_icons(&self, invalidate_cache: bool) {
         let icons: BTreeSet<_> = self.icons().collect();
+
+        for icon in icons {
+            if let Err(e) = icon.retrieve_cached(invalidate_cache).await {
+                log::info!("{e:?}");
+            }
+        }
+    }
+}
+
+impl Continuity {
+    pub async fn get_cached(
+        id: u64,
+        invalidate_cache: bool,
+    ) -> Result<Result<Self, Vec<GlowficError>>, Box<dyn Error>> {
+        let board = match Board::get_cached(id, invalidate_cache).await? {
+            Ok(board) => board,
+            Err(errors) => return Ok(Err(errors)),
+        };
+        let threads = match BoardPosts::get_all_cached(id, invalidate_cache).await? {
+            Ok(board_posts) => {
+                let mut threads = vec![];
+                for p in board_posts {
+                    log::info!("Downloading post {} - {}", p.id, &p.subject);
+                    let thread = match Thread::get_cached(p.id, invalidate_cache).await? {
+                        Ok(thread) => thread,
+                        Err(e) => return Ok(Err(e)),
+                    };
+                    threads.push(thread);
+                }
+                threads
+            }
+            Err(errors) => return Ok(Err(errors)),
+        };
+
+        Ok(Ok(Self { board, threads }))
+    }
+    pub async fn cache_all_icons(&self, invalidate_cache: bool) {
+        let icons: BTreeSet<_> = self.threads.iter().flat_map(|t| t.icons()).collect();
 
         for icon in icons {
             if let Err(e) = icon.retrieve_cached(invalidate_cache).await {
