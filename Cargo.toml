@@ -10,35 +10,34 @@ log = "0.4"
 mime = "0.3"
 rand = "0.8"
 regex = "1"
-sha2 = "0.10.8"
+sha2 = "0.10"
 uuid = { version = "1", features = ["v4"] }
 
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 
-fontdb = "0.14"
-resvg = "0.35"
+fontdb = "0.16"
+resvg = "0.41"
 textwrap = "0.16"
-tiny-skia = "0.10"
-usvg = "0.35"
-usvg-text-layout = "0.35"
+tiny-skia = "0.11"
+usvg = "0.41"
 
 epub-builder = { version = "0.7", default-features = false, features = ["libzip"] }
 
-ammonia = "3"
-cssparser = "0.29"
+ammonia = "4"
+cssparser = "0.33"
 html-escape = "0.2"
-html5ever = "0.26"
-lightningcss = "1.0.0-alpha.44"
-lol_html = "1.1"
-markup5ever = "0.11"
-markup5ever_rcdom = "0.2"
-xml5ever = "0.17"
+html5ever = "0.27"
+lightningcss = "1.0.0-alpha.55"
+lol_html = "1"
+markup5ever = "0.12"
+markup5ever_rcdom = "0.3"
+xml5ever = "0.18"
 
-image = { version = "0.25.1", default-features = false, features = ["webp", "png"] }
+image = { version = "0.25", default-features = false, features = ["webp", "png"] }
 
-clap = { version = "4.1", features = ["derive"] }
-simple_logger = "4.2"
+clap = { version = "4", features = ["derive"] }
+simple_logger = "4"
 slug = "0.1"

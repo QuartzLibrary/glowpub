@@ -1,8 +1,5 @@
 use std::fmt::Write;
 
-use usvg::TreeParsing;
-use usvg_text_layout::TreeTextToPath;
-
 use crate::types::User;
 
 pub fn image(subject: &str, authors: &[User]) -> Vec<u8> {
@@ -66,15 +63,6 @@ fn svg(subject: &str, authors: &[User]) -> String {
 }
 
 fn render_svg(svg: &str) -> Vec<u8> {
-    let mut tree = usvg::Tree::from_str(
-        svg,
-        &usvg::Options {
-            font_family: "Cinzel".to_string(),
-            ..Default::default()
-        },
-    )
-    .unwrap();
-
     let db = {
         let mut db = fontdb::Database::new();
         for font in FONTS {
@@ -83,12 +71,20 @@ fn render_svg(svg: &str) -> Vec<u8> {
         db.set_serif_family("Cinzel");
         db
     };
-    tree.convert_text(&db);
-    let tree = resvg::Tree::from_usvg(&tree);
+
+    let tree = usvg::Tree::from_str(
+        svg,
+        &usvg::Options {
+            font_family: "Cinzel".to_string(),
+            ..Default::default()
+        },
+        &db,
+    )
+    .unwrap();
 
     let pixmap = {
         let mut pixmap = tiny_skia::Pixmap::new(WIDTH, HEIGHT).unwrap();
-        tree.render(tiny_skia::Transform::default(), &mut pixmap.as_mut());
+        resvg::render(&tree, tiny_skia::Transform::default(), &mut pixmap.as_mut());
         pixmap
     };
 
