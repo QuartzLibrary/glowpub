@@ -26,15 +26,15 @@ usvg = "0.41"
 
 epub-builder = { version = "0.7", default-features = false, features = ["libzip"] }
 
-ammonia = "3"
-cssparser = "0.29"
+ammonia = "4"
+cssparser = "0.33"
 html-escape = "0.2"
-html5ever = "0.26"
-lightningcss = "1.0.0-alpha.44"
-lol_html = "1.1"
-markup5ever = "0.11"
-markup5ever_rcdom = "0.2"
-xml5ever = "0.17"
+html5ever = "0.27"
+lightningcss = "1.0.0-alpha.55"
+lol_html = "1"
+markup5ever = "0.12"
+markup5ever_rcdom = "0.3"
+xml5ever = "0.18"
 
 image = { version = "0.25.1", default-features = false, features = ["webp", "png"] }
 
