@@ -36,7 +36,7 @@ markup5ever = "0.12"
 markup5ever_rcdom = "0.3"
 xml5ever = "0.18"
 
-image = { version = "0.25", default-features = false, features = ["webp", "png"] }
+image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "webp"] }
 
 clap = { version = "4", features = ["derive"] }
 simple_logger = "4"

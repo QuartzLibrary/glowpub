@@ -59,6 +59,12 @@ struct CliOptions {
     /// it also preprends `▼ ` to the <summary> tag to make it similar to an open <details> tag.)
     #[clap(long)]
     flatten_details: Option<FlattenDetails>,
+
+    /// When inlining the images into the epub file, this will convert all images into jpeg files.
+    /// In general this will result in considerably smaller files if the images are not already jpegs.
+    /// (Does not affect SVGs.)
+    #[clap(long)]
+    jpeg: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
@@ -82,6 +88,7 @@ async fn main() {
         use_cache,
         text_to_speech,
         flatten_details,
+        jpeg,
     } = command.options();
 
     let epub_options = Options {
@@ -90,6 +97,7 @@ async fn main() {
             FlattenDetails::All | FlattenDetails::Mixed => true,
             FlattenDetails::None => false,
         },
+        jpeg,
     };
     let html_options = Options {
         text_to_speech,
@@ -97,6 +105,7 @@ async fn main() {
             FlattenDetails::All => true,
             FlattenDetails::None | FlattenDetails::Mixed => false,
         },
+        jpeg,
     };
 
     match command {

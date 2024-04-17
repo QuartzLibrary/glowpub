@@ -47,6 +47,18 @@ impl InternedImage {
             _ => unreachable!(),
         }
     }
+    pub fn try_into_jpeg(self) -> Self {
+        match (self.mime.type_(), self.mime.subtype()) {
+            (mime::IMAGE, mime::BMP)
+            | (mime::IMAGE, mime::GIF)
+            | (mime::IMAGE, mime::JPEG)
+            | (mime::IMAGE, mime::PNG) => self.into_jpeg(),
+            (mime::IMAGE, subtype) if subtype.as_str() == "webp" => self.into_jpeg(),
+
+            (mime::IMAGE, mime::SVG) => self,
+            _ => unreachable!(),
+        }
+    }
     fn to_dynamic_image(&self) -> Result<image::DynamicImage, Box<dyn Error>> {
         Ok(image::load(Cursor::new(&self.data), self.image_format()?)?)
     }
@@ -76,6 +88,25 @@ impl InternedImage {
             id,
             original_url,
             mime: mime::IMAGE_PNG,
+            data,
+        }
+    }
+    fn into_jpeg(self) -> Self {
+        let id = self.id;
+        let original_url = self.original_url.clone();
+
+        let mut data = Vec::with_capacity(self.data.len());
+
+        self.to_dynamic_image()
+            .unwrap()
+            .into_rgb8()
+            .write_to(&mut Cursor::new(&mut data), image::ImageFormat::Jpeg)
+            .unwrap();
+
+        Self {
+            id,
+            original_url,
+            mime: mime::IMAGE_JPEG,
             data,
         }
     }
