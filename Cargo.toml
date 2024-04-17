@@ -10,7 +10,7 @@ log = "0.4"
 mime = "0.3"
 rand = "0.8"
 regex = "1"
-sha2 = "0.10.8"
+sha2 = "0.10"
 uuid = { version = "1", features = ["v4"] }
 
 reqwest = { version = "0.12", features = ["json"] }
@@ -36,8 +36,8 @@ markup5ever = "0.12"
 markup5ever_rcdom = "0.3"
 xml5ever = "0.18"
 
-image = { version = "0.25.1", default-features = false, features = ["webp", "png"] }
+image = { version = "0.25", default-features = false, features = ["webp", "png"] }
 
-clap = { version = "4.1", features = ["derive"] }
-simple_logger = "4.2"
+clap = { version = "4", features = ["derive"] }
+simple_logger = "4"
 slug = "0.1"
