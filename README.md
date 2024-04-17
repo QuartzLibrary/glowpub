@@ -31,10 +31,11 @@ cargo run -- board 215
 > Combine these by chaining them after the command.
 > 
 > ```sh
-> cargo run -- board 215 --use-cache --text-to-speech --flatten-details=mixed --single-file
+> cargo run -- board 215 --use-cache --jpeg --text-to-speech --flatten-details=mixed --single-file
 > ```
 
 - `--use-cache`: re-use already cached items.
+- `--jpeg`: convert images in epubs to jpeg, can lead to significantly smaller file sizes.
 - `--text-to-speech`: change the output in a way that may be more comfortable for text-to-speech.
 - `--flatten-details`: flatten `details` tags (see example below).
   Valid values are `--flatten-details=none` (default), `--flatten-details=all`, `--flatten-details=mixed`. `mixed` flattens details in epubs only.

@@ -19,7 +19,14 @@ use super::{
 
 impl Continuity {
     pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        let images_to_intern = self.images_to_intern().await?;
+        let mut images_to_intern = self.images_to_intern().await?;
+
+        if options.jpeg {
+            images_to_intern = images_to_intern
+                .into_iter()
+                .map(|(k, v)| (k, v.try_into_jpeg()))
+                .collect();
+        }
 
         let mut builder = self.core_epub(
             options,
@@ -363,7 +370,14 @@ impl Thread {
 
 impl Thread {
     pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        let images_to_intern = self.images_to_intern().await?;
+        let mut images_to_intern = self.images_to_intern().await?;
+
+        if options.jpeg {
+            images_to_intern = images_to_intern
+                .into_iter()
+                .map(|(k, v)| (k, v.try_into_jpeg()))
+                .collect();
+        }
 
         let mut builder = self.core_epub(
             options,

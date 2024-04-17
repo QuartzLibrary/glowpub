@@ -19,6 +19,7 @@ const STYLE: &str = include_str!("book.css");
 pub struct Options {
     pub text_to_speech: bool,
     pub flatten_details: bool,
+    pub jpeg: bool,
 }
 
 fn raw_title_page(post: &Post, reply_count: usize) -> String {
