@@ -1,4 +1,8 @@
-use super::{raw_content_page, raw_copyright_page, raw_title_page, Options, Thread, STYLE};
+use std::collections::HashMap;
+
+use super::{
+    raw_content_page, raw_copyright_page, raw_title_page, transform, Options, Thread, STYLE,
+};
 
 impl Thread {
     pub fn to_single_html_page(&self, options: Options) -> String {
@@ -6,11 +10,18 @@ impl Thread {
         let content = raw_content_page(&self.content_blocks(options));
         let back = raw_copyright_page(&self.post);
 
-        wrap_html(&self.post.subject, &format!("{front}{content}{back}"))
+        wrap_html(
+            &self.post.subject,
+            &format!("{front}{content}{back}"),
+            options,
+        )
     }
 }
 
-fn wrap_html(subject: &str, content: &str) -> String {
+fn wrap_html(subject: &str, content: &str, options: Options) -> String {
+    let content = super::process_content(content, options, &HashMap::new());
+    let subject = transform::escape_html(subject);
+
     format!(
         r##"<!DOCTYPE html>
 <html lang="en">

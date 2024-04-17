@@ -1,8 +1,10 @@
 mod cover;
-mod transform;
 
 pub mod epub;
 pub mod html;
+pub mod transform;
+
+use std::collections::HashMap;
 
 use crate::{
     types::{BoardInPost, Character, Icon, User},
@@ -40,7 +42,6 @@ fn raw_title_page(post: &Post, reply_count: usize) -> String {
 
     let description = description
         .as_ref()
-        .map(|v| fix_content(v, false))
         .map(|v| format!(r##"<div class="description">{v}</div>"##))
         .unwrap_or_default();
 
@@ -48,11 +49,11 @@ fn raw_title_page(post: &Post, reply_count: usize) -> String {
         r##"
 
     <div class="title-page">
-        <h1 class="title" post-id="{id}">{subject}</h1>
-        <h2 class="authors" glowfic-ids="{author_ids:?}">by {author_names}</h2>
-        <h3 class="board" board-id="{board_id}">in {board_name}</h3>
-        <p class="status">[Status: <a href="https://glowfic.com/posts/{id}">{status}</a>]</p>
-        <p class="reply-count">[{reply_count} replies]</p>
+        <h1 post-id="{id}">{subject}</h1>
+        <h2 author-ids="{author_ids:?}">by {author_names}</h2>
+        <h3 board-id="{board_id}">in {board_name}</h3>
+        <p>[Status: <a href="https://glowfic.com/posts/{id}" rel="noopener noreferrer">{status}</a>]</p>
+        <p>[{reply_count} replies]</p>
         {description}
     </div>
 
@@ -65,7 +66,7 @@ pub fn raw_content_page(content_blocks: &[String]) -> String {
         .iter()
         .map(String::as_ref)
         .collect::<Vec<_>>()
-        .join("<hr/>");
+        .join("<hr>");
 
     format!(
         r##"
@@ -131,20 +132,20 @@ fn content_block(
             let screenname = screenname
                 .as_ref()
                 .map(|n| format!("({n})"))
-                .map(|n| transform::encode_html(&n))
+                .map(|n| transform::escape_html(&n))
                 .unwrap_or_default();
-            let character_name = transform::encode_html(character_name);
+            let character_name = transform::escape_html(character_name);
 
             match author {
                 Some(User {
                     id: user_id,
                     username,
                 }) => {
-                    let username = transform::encode_html(username);
+                    let username = transform::escape_html(username);
                     let author_line = if options.text_to_speech {
-                        format!(r##"{username} <br/>as {character_name}"##)
+                        format!(r##"{username} <br>as {character_name}"##)
                     } else {
-                        format!(r##"{username} <br/>as {character_name} <br/>{screenname}"##)
+                        format!(r##"{username} <br>as {character_name} <br>{screenname}"##)
                     };
 
                     format!(
@@ -159,7 +160,7 @@ fn content_block(
                     let author_line = if options.text_to_speech {
                         character_name.clone()
                     } else {
-                        format!(r##"{character_name} <br/>{screenname}"##)
+                        format!(r##"{character_name} <br>{screenname}"##)
                     };
 
                     format!(
@@ -177,7 +178,7 @@ fn content_block(
                 id: user_id,
                 username,
             }) => {
-                let username = transform::encode_html(username);
+                let username = transform::escape_html(username);
                 format!(
                     r##"<span author-id="{user_id}" author-name="{username}" class="icon-caption">{username}</span>"##
                 )
@@ -191,17 +192,16 @@ fn content_block(
         .and_then(|Icon { id, keyword, url }| {
             let keyword = keyword
                 .as_deref()
-                .map(transform::encode_html)
+                .map(transform::escape_html)
                 .map(|keyword| format!(r#" alt="{keyword}""#))
                 .unwrap_or_default();
             let url = url.as_ref()?;
+            let url = transform::escape_html(url);
             Some(format!(
-                r##"<img src="{url}"{keyword} glowfic-id="{id}" class="icon"/>"##
+                r##"<img src="{url}"{keyword} icon-id="{id}" class="icon">"##
             ))
         })
         .unwrap_or_default();
-
-    let content = fix_content(content, options.flatten_details);
 
     let reply_id = reply_id
         .map(|id| format!(r##" reply-id="{id}""##))
@@ -232,10 +232,7 @@ fn raw_copyright_page(post: &Post) -> String {
     } = post;
 
     let author_names = author_names(authors);
-    let author_ids: String = format!(
-        "{:?}",
-        authors.iter().map(|user| user.id).collect::<Vec<_>>()
-    );
+    let author_ids: Vec<u64> = authors.iter().map(|user| user.id).collect();
 
     let BoardInPost {
         id: board_id,
@@ -247,9 +244,9 @@ fn raw_copyright_page(post: &Post) -> String {
 
     <div class="copyright-page">
         <h3>This was</h3>
-        <h1 class="title" post-id="{id}">{subject}</h1>
-        <h2 class="authors" glowfic-ids="{author_ids}">by {author_names}</h2>
-        <h3 class="board" board-id="{board_id}">in {board_name}</h3>
+        <h1 post-id="{id}">{subject}</h1>
+        <h2 author-ids="{author_ids:?}">by {author_names}</h2>
+        <h3 board-id="{board_id}">in {board_name}</h3>
 
         © {author_names}
     </div>
@@ -261,7 +258,7 @@ fn raw_copyright_page(post: &Post) -> String {
 fn author_names(authors: &[User]) -> String {
     let usernames: Vec<_> = authors
         .iter()
-        .map(|a| transform::encode_html(&a.username))
+        .map(|a| transform::escape_html(&a.username))
         .collect();
 
     match &*usernames {
@@ -275,12 +272,14 @@ fn author_names(authors: &[User]) -> String {
     }
 }
 
-fn fix_content(content: &str, flatten_details: bool) -> String {
+fn process_content(content: &str, options: Options, url_map: &HashMap<String, String>) -> String {
     let content = transform::repair_and_sanitize(content);
     let content = transform::decode_named_entities(content);
+    let content =
+        transform::edit_image_urls(&content, |url| url_map.get(&url).cloned().unwrap_or(url));
 
-    if flatten_details {
-        transform::flatten_details(&content).unwrap()
+    if options.flatten_details {
+        transform::flatten_details(&content)
     } else {
         content
     }

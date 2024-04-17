@@ -34,7 +34,11 @@ fn allowed_attribute<'u>(element: &str, attribute: &str, value: &'u str) -> Opti
         (_, "title" | "lang" | "aria-label", _) => Some(Cow::Borrowed(value)),
 
         (_, "id" | "name", _) => None,
-        (_, "class", _) => None, // Any inline stylesheets have been sanitized anyway.
+        (_, "class", class) if CLASSES.contains(&class) => Some(Cow::Borrowed(value)),
+        (_, "class", _) => {
+            log::info!("Removing unrecognised class: <{element} {attribute}=\"{value}\">");
+            None
+        }
 
         ("a", "href", _) => Some(Cow::Borrowed(value)),
         ("a", "rel", "noopener noreferrer") => Some(Cow::Borrowed(value)),
@@ -66,6 +70,14 @@ fn allowed_attribute<'u>(element: &str, attribute: &str, value: &'u str) -> Opti
 
         // Deprecated
         (_, "align", "left" | "right" | "center" | "justify") => Some(Cow::Borrowed(value)),
+
+        // Internal
+        (
+            _,
+            "post-id" | "icon-id" | "board-id" | "author-id" | "character-id" | "reply-id",
+            value,
+        ) if value.parse::<u128>().is_ok() => Some(Cow::Borrowed(value)),
+        (_, "author-ids" | "author-name" | "character-name", value) => Some(Cow::Borrowed(value)),
 
         (_, _, _) => {
             log::info!("Removing unrecognised attribute: <{element} {attribute}=\"{value}\">");
@@ -308,4 +320,28 @@ const ALLOWED_ATTRIBUTES: &[&str] = &[
     // "UnhideWhenUsed",
     "width",
     // "rel", // Handled separately
+
+    // Internal
+    "post-id",
+    "author-ids",
+    "icon-id",
+    "board-id",
+    "author-id",
+    "author-name",
+    "character-id",
+    "character-name",
+    "reply-id",
+];
+
+/// Keep in sync with `book.css`
+const CLASSES: &[&str] = &[
+    "title-page",
+    "copyright-page",
+    "description",
+    "content",
+    "content-block",
+    "character",
+    "character",
+    "icon",
+    "icon-caption",
 ];
