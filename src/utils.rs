@@ -1,4 +1,4 @@
-use std::{io::Cursor, str::FromStr};
+use std::{io::{Cursor, self, stdin}, str::FromStr};
 
 use image::io::Reader;
 use mime::Mime;
@@ -93,4 +93,10 @@ where F: Serialize + ?Sized {
         Some(h) => builder.headers(h),
         None => builder
     }.send().await
+}
+
+pub fn read_input() -> Result<String, io::Error> {
+    let mut buffer = String::new();
+    stdin().read_line(&mut buffer)?;
+    Ok(buffer.trim_end().to_string())
 }
