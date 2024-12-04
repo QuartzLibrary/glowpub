@@ -1,7 +1,9 @@
-use std::{io::Cursor, str::FromStr, sync::OnceLock};
+use std::{io::{Cursor, self, stdin}, str::FromStr, sync::OnceLock};
 
 use image::io::Reader;
 use mime::Mime;
+use reqwest::{header::HeaderMap, Response};
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 
 use crate::types::{Icon, Thread};
@@ -70,4 +72,38 @@ pub fn http_client() -> reqwest::Client {
                 .expect("failed to build http client.")
         })
         .clone()
+}
+
+pub async fn request<F>(
+    url: &str,
+    form_data: Option<&F>,
+    post: bool,
+    headers: Option<HeaderMap>,
+) -> reqwest::Result<Response>
+where
+    F: Serialize + ?Sized,
+{
+    let mut builder = if post {
+        http_client().post(url)
+    } else {
+        http_client().get(url)
+    };
+    match form_data {
+        Some(d) => {
+            builder = builder.form(d);
+        }
+        None => {}
+    }
+    match headers {
+        Some(h) => builder.headers(h),
+        None => builder,
+    }
+    .send()
+    .await
+}
+
+pub fn read_input() -> Result<String, io::Error> {
+    let mut buffer = String::new();
+    stdin().read_line(&mut buffer)?;
+    Ok(buffer.trim_end().to_string())
 }
