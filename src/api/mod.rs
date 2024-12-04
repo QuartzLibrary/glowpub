@@ -9,6 +9,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use crate::{
     types::{BoardInPost, Section, User},
     Board, Post, Reply,
+    utils::request_get
 };
 
 const GLOWFIC_API_V1: &str = "https://www.glowfic.com/api/v1";
@@ -147,7 +148,7 @@ pub(crate) async fn get_glowfic<T>(
 where
     T: DeserializeOwned,
 {
-    let response = retry(5, || reqwest::get(url)).await?;
+    let response = retry(5, || request_get(url)).await?;
     let parsed: GlowficResponse<T> = response.json().await?;
 
     Ok(parsed.into_result())

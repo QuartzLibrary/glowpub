@@ -2,7 +2,11 @@ use std::{io::Cursor, str::FromStr};
 
 use image::io::Reader;
 use mime::Mime;
+use reqwest::{header::HeaderMap, Response};
+use serde::Serialize;
 use sha2::{Digest, Sha256};
+
+use cached::proc_macro::once;
 
 use crate::types::{Icon, Thread};
 
@@ -55,4 +59,38 @@ pub fn url_hash(url: &str) -> String {
     let hash: [u8; 16] = hash[..16].try_into().unwrap();
     let hash = u128::from_be_bytes(hash);
     format!("{hash:x}")
+}
+
+#[once]
+pub fn http_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .user_agent(concat!(
+            env!("CARGO_PKG_NAME"),
+            "/",
+            env!("CARGO_PKG_VERSION"),
+        ))
+        .build()
+        .expect("failed to build http client.")
+}
+
+pub async fn request_get(url: &str) -> reqwest::Result<Response> {
+    http_client().get(url).send().await
+}
+
+pub async fn request<F>(url: &str, form_data: Option<&F>, post: bool, headers: Option<HeaderMap> ) -> reqwest::Result<Response>
+where F: Serialize + ?Sized {
+    let mut builder = if post {
+        http_client().post(url)
+    }
+    else {
+        http_client().get(url)
+    };
+    match form_data {
+        Some(d) => { builder = builder.form(d); },
+        None => {}
+    }
+    match headers {
+        Some(h) => builder.headers(h),
+        None => builder
+    }.send().await
 }
