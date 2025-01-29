@@ -3,7 +3,7 @@ use std::{ops::Range, time::Duration};
 use rand::{distributions::Uniform, Rng};
 use serde_json::Value;
 
-use crate::{utils::request_get, Board, Post};
+use crate::{utils::http_client, Board, Post};
 
 use super::super::{BoardPosts, Replies};
 
@@ -69,7 +69,7 @@ pub async fn to_responses(urls: &[String]) -> Result<Vec<Value>> {
     let mut responses: Vec<Value> = vec![];
 
     for url in urls {
-        responses.push(request_get(url).await?.json().await?);
+        responses.push(http_client().get(url).send().await?.json().await?);
 
         tokio::time::sleep(Duration::from_millis(100)).await;
     }

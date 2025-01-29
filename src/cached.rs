@@ -12,7 +12,9 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::{
     api::{BoardPosts, GlowficError, PostInBoard, Replies},
     types::{Continuity, Icon, Thread},
-    utils::{extension_to_image_mime, guess_image_mime, mime_to_image_extension, request_get, url_hash},
+    utils::{
+        extension_to_image_mime, guess_image_mime, http_client, mime_to_image_extension, url_hash,
+    },
     Board, Post, Reply,
 };
 
@@ -276,7 +278,7 @@ where
 }
 
 pub async fn download_image(url: &str) -> Result<(Mime, Vec<u8>), reqwest::Error> {
-    let response = request_get(url).await?;
+    let response = http_client().get(url).send().await?;
 
     let content_type = response.headers().get(CONTENT_TYPE).unwrap();
     let mime = Mime::from_str(content_type.to_str().unwrap()).unwrap();
