@@ -7,7 +7,8 @@ use chrono::{DateTime, Utc};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
-    types::{BoardInPost, Section, User},
+    types::{BoardInPost, Section, Token, User},
+    utils::{http_client, AnyMap},
     Board, Post, Reply,
 };
 
@@ -147,18 +148,81 @@ pub(crate) async fn get_glowfic<T>(
 where
     T: DeserializeOwned,
 {
-    let response = retry(5, || reqwest::get(url)).await?;
-    let parsed: GlowficResponse<T> = response.json().await?;
+    let parsed: GlowficResponse<T> = retry(5, || {
+        http_client()
+            .get(url)
+            .any_map(|request| match Token::try_global() {
+                Some(token) => request.bearer_auth(token.token),
+                None => request,
+            })
+            .send()
+    })
+    .await?
+    .json()
+    .await?;
 
-    Ok(parsed.into_result())
+    if parsed.is_permission_error() && Token::try_global().is_none() {
+        if let Ok(Ok(Ok(Token { token }))) = Token::global_or_prompt().await {
+            let response = retry(5, || http_client().get(url).bearer_auth(&token).send()).await?;
+            let parsed: GlowficResponse<T> = response.json().await?;
+
+            Ok(parsed.into_result())
+        } else {
+            Ok(parsed.into_result())
+        }
+    } else {
+        Ok(parsed.into_result())
+    }
 }
-
 impl<T> GlowficResponse<T> {
     fn into_result(self) -> Result<T, Vec<GlowficError>> {
         match self {
             GlowficResponse::Value(value) => Ok(value),
             GlowficResponse::Error { errors } => Err(errors),
         }
+    }
+}
+
+impl<T> GlowficResponse<T> {
+    fn is_permission_error(&self) -> bool {
+        let Self::Error { errors } = self else {
+            return false;
+        };
+        errors.iter().any(|e| e.is_permission_error())
+    }
+}
+impl GlowficError {
+    pub fn is_permission_error(&self) -> bool {
+        self.message == "You do not have permission to perform this action."
+    }
+    pub fn is_auth_error(&self) -> bool {
+        self.message == "Authorization token is not valid."
+    }
+}
+impl Token {
+    pub async fn get(
+        username: &str,
+        password: &str,
+    ) -> Result<Result<Self, Vec<GlowficError>>, reqwest::Error> {
+        let parsed: GlowficResponse<Self> = http_client()
+            .post(format!("{GLOWFIC_API_V1}/login"))
+            .form(&[("username", username), ("password", password)])
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        Ok(parsed.into_result())
+    }
+    pub async fn validate(&self) -> Result<Result<(), Vec<GlowficError>>, reqwest::Error> {
+        let parsed: GlowficResponse<serde_json::Value> = http_client()
+            .get(format!("{GLOWFIC_API_V1}/boards"))
+            .bearer_auth(self.token.clone())
+            .send()
+            .await?
+            .json()
+            .await?;
+        Ok(parsed.into_result().map(drop))
     }
 }
 

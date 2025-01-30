@@ -1,10 +1,12 @@
-use std::{io::Cursor, str::FromStr};
+use std::{io::Cursor, str::FromStr, sync::OnceLock};
 
 use image::io::Reader;
 use mime::Mime;
 use sha2::{Digest, Sha256};
 
 use crate::types::{Icon, Thread};
+
+const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 impl Thread {
     pub fn icons(&self) -> impl Iterator<Item = &Icon> {
@@ -55,4 +57,26 @@ pub fn url_hash(url: &str) -> String {
     let hash: [u8; 16] = hash[..16].try_into().unwrap();
     let hash = u128::from_be_bytes(hash);
     format!("{hash:x}")
+}
+
+pub fn http_client() -> reqwest::Client {
+    // TODO: use global `std::sync::LazyLock` once stable.
+    pub static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    HTTP_CLIENT
+        .get_or_init(|| {
+            reqwest::Client::builder()
+                .user_agent(USER_AGENT)
+                .build()
+                .expect("failed to build http client.")
+        })
+        .clone()
+}
+
+pub trait AnyMap: Sized {
+    fn any_map<O>(self, f: impl FnOnce(Self) -> O) -> O;
+}
+impl<T> AnyMap for T {
+    fn any_map<O>(self, f: impl FnOnce(Self) -> O) -> O {
+        f(self)
+    }
 }
