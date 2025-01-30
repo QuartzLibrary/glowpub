@@ -48,8 +48,7 @@ impl Token {
         println!("Please enter your username:");
         let username = read_input()?;
 
-        println!("Please enter your password:");
-        let password = read_input()?;
+        let password = rpassword::prompt_password("Please enter your password: ")?;
 
         Ok(Self::get(&username, &password).await)
     }

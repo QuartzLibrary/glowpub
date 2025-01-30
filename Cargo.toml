@@ -41,3 +41,4 @@ image = { version = "0.25", default-features = false, features = ["bmp", "gif", 
 clap = { version = "4", features = ["derive"] }
 simple_logger = "4"
 slug = "0.1"
+rpassword = "7.3.1"
