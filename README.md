@@ -2,6 +2,8 @@
 
 Using this software requires [Rust](https://www.rust-lang.org/tools/install).
 
+You can either clone the repository and follow the instructions, or run `cargo install glowpub --locked` to install `glowpub`. If you install it, replace `cargo run --` with `glowpub` in the commands below.
+
 ---
 
 To process a specific post clone this repo and, from its directory, run:
