@@ -19,7 +19,7 @@ where
 }
 
 struct Rfc3339Visitor;
-impl<'de> serde::de::Visitor<'de> for Rfc3339Visitor {
+impl serde::de::Visitor<'_> for Rfc3339Visitor {
     type Value = DateTime<Utc>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
