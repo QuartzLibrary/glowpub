@@ -1,6 +1,6 @@
 use std::{io::Cursor, str::FromStr, sync::OnceLock};
 
-use image::io::Reader;
+use image::ImageReader;
 use mime::Mime;
 use sha2::{Digest, Sha256};
 
@@ -30,7 +30,7 @@ pub fn mime_to_image_extension(mime: &Mime) -> Option<String> {
 }
 
 pub fn guess_image_mime(data: &[u8]) -> Option<Mime> {
-    let mime = Reader::new(Cursor::new(data))
+    let mime = ImageReader::new(Cursor::new(data))
         .with_guessed_format()
         .expect("reader shouldn't fail, it is backed by a slice")
         .format()?
