@@ -65,13 +65,6 @@ pub struct Token {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct LoginInfo {
-    pub username: String,
-    pub password: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct BoardInPost {
     pub id: u64,
     pub name: String,
