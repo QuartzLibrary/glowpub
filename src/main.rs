@@ -1,4 +1,5 @@
 use clap::Parser;
+use slug::slugify;
 use std::path::{Path, PathBuf};
 
 use glowpub::{
@@ -38,12 +39,12 @@ enum Command {
 impl Command {
     fn options(&self) -> CliOptions {
         match self {
-            Command::Post { options, .. } | Command::Board { options, .. } => *options,
+            Command::Post { options, .. } | Command::Board { options, .. } => options.clone(),
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, Parser)]
+#[derive(Debug, Clone, Parser)]
 struct CliOptions {
     /// Reuse already downloaded data. Images are always cached.
     #[clap(long)]
@@ -65,6 +66,10 @@ struct CliOptions {
     /// (Does not affect SVGs.)
     #[clap(long)]
     jpeg: bool,
+
+    /// Output epub file to the specified directory.
+    #[clap(long)]
+    output_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
@@ -89,7 +94,14 @@ async fn main() {
         text_to_speech,
         flatten_details,
         jpeg,
+        output_dir,
     } = command.options();
+    let output_dir = output_dir
+        .map(|path| path.canonicalize().unwrap())
+        .map(|path| {
+            path.read_dir().unwrap();
+            path
+        });
 
     let epub_options = Options {
         text_to_speech,
@@ -142,8 +154,19 @@ async fn main() {
             let path = PathBuf::from(format!("./books/html/{name}.html"));
             write(path, thread.to_single_html_page(html_options));
 
+            let (name, path) = match output_dir {
+                Some(dir) => {
+                    let name = slugify(name);
+                    let path = dir.join(PathBuf::from(format!("{name}.epub")));
+                    (name, path)
+                }
+                None => {
+                    let path = PathBuf::from(format!("./books/epub/{name}.epub"));
+                    (name, path)
+                }
+            };
+
             log::info!("Generating epub document {name}...");
-            let path = PathBuf::from(format!("./books/epub/{name}.epub"));
             write(path, thread.to_epub(epub_options).await.unwrap());
         }
         Command::Board {
@@ -175,8 +198,19 @@ async fn main() {
                 let path = PathBuf::from(format!("./books/html/{name}.html"));
                 write(path, thread.to_single_html_page(html_options));
 
+                let (name, path) = match output_dir.clone() {
+                    Some(dir) => {
+                        let name = slugify(name);
+                        let path = dir.join(PathBuf::from(format!("{name}.epub")));
+                        (name, path)
+                    }
+                    None => {
+                        let path = PathBuf::from(format!("./books/epub/{name}.epub"));
+                        (name, path)
+                    }
+                };
+
                 log::info!("Generating epub document {name}...");
-                let path = PathBuf::from(format!("./books/epub/{name}.epub"));
                 write(path, thread.to_epub(epub_options).await.unwrap());
             }
         }
@@ -204,8 +238,12 @@ async fn main() {
                 format!("[{board_id}] {name}")
             };
 
+            let path = match output_dir {
+                Some(dir) => dir.join(PathBuf::from(format!("{name}.epub"))),
+                None => PathBuf::from(format!("./books/epub/{name}.epub")),
+            };
+
             log::info!("Generating epub document {name}...");
-            let path = PathBuf::from(format!("./books/epub/{name}.epub"));
             write(path, continuity.to_epub(epub_options).await.unwrap());
         }
     }
