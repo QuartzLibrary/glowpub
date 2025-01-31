@@ -4,6 +4,7 @@ use std::{
     io::Cursor,
 };
 
+use image::imageops::FilterType;
 use mime::Mime;
 
 use crate::{
@@ -110,16 +111,37 @@ impl InternedImage {
             data,
         }
     }
+    fn resize_down(self, width: u32) -> Result<Self, Box<dyn Error>> {
+        let img = self.to_dynamic_image()?;
+        if img.width() > width {
+            let img = img.resize(width, img.height(), FilterType::Lanczos3);
+
+            let mut data = Vec::with_capacity(self.data.len());
+            img.write_to(&mut Cursor::new(&mut data), self.image_format()?)?;
+
+            Ok(Self {
+                id: self.id,
+                original_url: self.original_url,
+                mime: self.mime,
+                data,
+            })
+        } else {
+            Ok(self)
+        }
+    }
 }
 
 impl Continuity {
-    pub async fn images_to_intern(&self) -> Result<HashMap<String, InternedImage>, Box<dyn Error>> {
+    pub async fn images_to_intern(
+        &self,
+        resize_icons: Option<u32>,
+    ) -> Result<HashMap<String, InternedImage>, Box<dyn Error>> {
         let mut interned_images: HashMap<String, InternedImage> = HashMap::new();
         let mut skip: HashSet<String> = HashSet::default();
 
         for thread in &self.threads {
             thread
-                .icons_to_intern(&mut interned_images, &mut skip)
+                .icons_to_intern(&mut interned_images, &mut skip, resize_icons)
                 .await?;
 
             thread
@@ -132,11 +154,14 @@ impl Continuity {
 }
 
 impl Thread {
-    pub async fn images_to_intern(&self) -> Result<HashMap<String, InternedImage>, Box<dyn Error>> {
+    pub async fn images_to_intern(
+        &self,
+        resize_icons: Option<u32>,
+    ) -> Result<HashMap<String, InternedImage>, Box<dyn Error>> {
         let mut interned_images: HashMap<String, InternedImage> = HashMap::new();
         let mut skip: HashSet<String> = HashSet::default();
 
-        self.icons_to_intern(&mut interned_images, &mut skip)
+        self.icons_to_intern(&mut interned_images, &mut skip, resize_icons)
             .await?;
 
         self.image_tags_to_intern(&mut interned_images, &mut skip)
@@ -149,6 +174,7 @@ impl Thread {
         &self,
         interned_images: &mut HashMap<String, InternedImage>,
         skip: &mut HashSet<String>,
+        resize_icons: Option<u32>,
     ) -> Result<(), Box<dyn Error>> {
         for icon in self.icons() {
             let Some(url) = icon.url.clone() else {
@@ -159,7 +185,7 @@ impl Thread {
                 continue;
             }
 
-            match icon.intern().await {
+            match icon.intern(resize_icons).await {
                 Ok(interned) => interned_images.insert(url, interned.into_common_format()),
                 Err(e) => {
                     let id = icon.id;
@@ -213,13 +239,21 @@ impl Thread {
 }
 
 impl Icon {
-    async fn intern(&self) -> Result<InternedImage, Box<dyn Error>> {
+    async fn intern(&self, resize_icons: Option<u32>) -> Result<InternedImage, Box<dyn Error>> {
         let (mime, data) = self.download_cached(false).await?;
-        Ok(InternedImage {
+
+        let mut interned_image = InternedImage {
             id: Some(self.id.try_into().unwrap()),
             original_url: self.url.clone().unwrap(),
             mime,
             data,
-        })
+        };
+
+        interned_image = match resize_icons {
+            Some(width) => interned_image.resize_down(width)?,
+            None => interned_image,
+        };
+
+        Ok(interned_image)
     }
 }

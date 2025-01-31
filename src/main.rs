@@ -68,6 +68,12 @@ struct CliOptions {
     #[clap(long)]
     jpeg: bool,
 
+    /// When inlining icons into the epub file, this will scale all icon images above the provided width down to that width.
+    /// Defaults to "100" if no value is provided.
+    /// (Does not affect SVGs or non-icon images.)
+    #[clap(long)]
+    resize_icons: Option<Option<u32>>,
+
     /// Output epub file to the specified directory.
     #[clap(long)]
     output_dir: Option<PathBuf>,
@@ -95,8 +101,10 @@ async fn main() {
         text_to_speech,
         flatten_details,
         jpeg,
+        resize_icons,
         output_dir,
     } = command.options();
+    let resize_icons = resize_icons.map(|inner| inner.unwrap_or(100));
 
     let output_dir = output_dir.unwrap_or_else(|| PathBuf::from(DEFAULT_OUTPUT_DIR));
 
@@ -107,6 +115,7 @@ async fn main() {
             FlattenDetails::None => false,
         },
         jpeg,
+        resize_icons: resize_icons,
     };
     let html_options = Options {
         text_to_speech,
@@ -115,6 +124,7 @@ async fn main() {
             FlattenDetails::None | FlattenDetails::Mixed => false,
         },
         jpeg,
+        resize_icons: resize_icons,
     };
 
     match command {

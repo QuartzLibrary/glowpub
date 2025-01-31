@@ -38,6 +38,7 @@ cargo run -- board 215
 
 - `--use-cache`: re-use already cached items.
 - `--jpeg`: convert images in epubs to jpeg, can lead to significantly smaller file sizes.
+- `--resize-icons`: downscale the icons in epubs to the specified width (e.g. `--resize-icons=250`) in pixels, or 100 pixels if unspecified.
 - `--text-to-speech`: change the output in a way that may be more comfortable for text-to-speech.
 - `--flatten-details`: flatten `details` tags (see example below).
   Valid values are `--flatten-details=none` (default), `--flatten-details=all`, `--flatten-details=mixed`. `mixed` flattens details in epubs only.

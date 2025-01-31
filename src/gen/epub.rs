@@ -19,7 +19,7 @@ use super::{
 
 impl Continuity {
     pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut images_to_intern = self.images_to_intern().await?;
+        let mut images_to_intern = self.images_to_intern(options.resize_icons).await?;
 
         if options.jpeg {
             images_to_intern = images_to_intern
@@ -370,7 +370,7 @@ impl Thread {
 
 impl Thread {
     pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut images_to_intern = self.images_to_intern().await?;
+        let mut images_to_intern = self.images_to_intern(options.resize_icons).await?;
 
         if options.jpeg {
             images_to_intern = images_to_intern
