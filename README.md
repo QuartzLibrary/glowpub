@@ -41,6 +41,7 @@ cargo run -- board 215
 - `--text-to-speech`: change the output in a way that may be more comfortable for text-to-speech.
 - `--flatten-details`: flatten `details` tags (see example below).
   Valid values are `--flatten-details=none` (default), `--flatten-details=all`, `--flatten-details=mixed`. `mixed` flattens details in epubs only.
+- `--output-dir`: output resulting epub files directly into the specified directory (e.g. `--output-dir=~/`). Can flood the directory if used with `board` but without `--single-file`.
 - `--single-file`: if downloading a board/continuity, output the entire board in a single epub file.
 
 ---
