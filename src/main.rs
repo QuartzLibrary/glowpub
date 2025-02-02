@@ -104,7 +104,8 @@ async fn main() {
         resize_icons,
         output_dir,
     } = command.options();
-    let resize_icons = resize_icons.map(|inner| inner.unwrap_or(100));
+
+    let resize_icons = resize_icons.unwrap_or(Some(100));
 
     let output_dir = output_dir.unwrap_or_else(|| PathBuf::from(DEFAULT_OUTPUT_DIR));
 
@@ -115,7 +116,7 @@ async fn main() {
             FlattenDetails::None => false,
         },
         jpeg,
-        resize_icons: resize_icons,
+        resize_icons,
     };
     let html_options = Options {
         text_to_speech,
@@ -124,7 +125,7 @@ async fn main() {
             FlattenDetails::None | FlattenDetails::Mixed => false,
         },
         jpeg,
-        resize_icons: resize_icons,
+        resize_icons,
     };
 
     match command {
