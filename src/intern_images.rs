@@ -4,6 +4,7 @@ use std::{
     io::Cursor,
 };
 
+use image::imageops::FilterType;
 use mime::Mime;
 
 use crate::{
@@ -21,6 +22,9 @@ pub struct InternedImage {
     pub data: Vec<u8>,
 }
 impl InternedImage {
+    pub fn is_icon(&self) -> bool {
+        self.id.is_some()
+    }
     pub fn name(&self) -> String {
         let Self { id, mime, .. } = self;
 
@@ -59,6 +63,32 @@ impl InternedImage {
             _ => unreachable!(),
         }
     }
+    pub fn resize_down(self, width: u32) -> Result<Self, Box<dyn Error>> {
+        let img = self.to_dynamic_image()?;
+
+        if img.width() < width {
+            return Ok(self);
+        }
+
+        let Ok(format) = self.image_format() else {
+            // Avoid resizing unsupported formats.
+            return Ok(self);
+        };
+
+        let img = img.resize(width, img.height(), FilterType::Lanczos3);
+
+        let mut data = Vec::with_capacity(self.data.len());
+        img.write_to(&mut Cursor::new(&mut data), format)?;
+
+        Ok(Self {
+            id: self.id,
+            original_url: self.original_url,
+            mime: self.mime,
+            data,
+        })
+    }
+}
+impl InternedImage {
     fn to_dynamic_image(&self) -> Result<image::DynamicImage, Box<dyn Error>> {
         Ok(image::load(Cursor::new(&self.data), self.image_format()?)?)
     }
@@ -215,6 +245,7 @@ impl Thread {
 impl Icon {
     async fn intern(&self) -> Result<InternedImage, Box<dyn Error>> {
         let (mime, data) = self.download_cached(false).await?;
+
         Ok(InternedImage {
             id: Some(self.id.try_into().unwrap()),
             original_url: self.url.clone().unwrap(),

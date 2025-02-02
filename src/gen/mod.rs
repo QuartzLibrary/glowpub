@@ -20,6 +20,7 @@ pub struct Options {
     pub text_to_speech: bool,
     pub flatten_details: bool,
     pub jpeg: bool,
+    pub resize_icons: Option<u32>,
 }
 
 fn raw_title_page(post: &Post, reply_count: usize) -> String {
