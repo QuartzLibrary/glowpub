@@ -74,7 +74,8 @@ struct CliOptions {
     #[clap(long)]
     resize_icons: Option<Option<u32>>,
 
-    /// Output epub file to the specified directory.
+    /// Output files in this directory (e.g. `--output-dir=~/glowfic`).
+    /// Note that this can flood the directory if used with `board` but without `--single-file`.
     #[clap(long)]
     output_dir: Option<PathBuf>,
 }
@@ -105,7 +106,7 @@ async fn main() {
         output_dir,
     } = command.options();
 
-    let resize_icons = resize_icons.unwrap_or(Some(100));
+    let resize_icons = resize_icons.map(|r| r.unwrap_or(100));
 
     let output_dir = output_dir.unwrap_or_else(|| PathBuf::from(DEFAULT_OUTPUT_DIR));
 
