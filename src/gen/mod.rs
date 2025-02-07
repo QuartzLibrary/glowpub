@@ -97,6 +97,10 @@ impl Post {
             None,
             &None,
             &self.character,
+            &self
+                .character
+                .as_ref()
+                .map(|character| character.name.clone()),
             &self.icon,
             &self.content,
             options,
@@ -109,6 +113,7 @@ impl Reply {
             Some(self.id),
             &Some(self.user.clone()),
             &self.character,
+            &self.character_name,
             &self.icon,
             &self.content,
             options,
@@ -120,6 +125,7 @@ fn content_block(
     reply_id: Option<u64>,
     author: &Option<User>,
     character: &Option<Character>,
+    character_name: &Option<String>,
     icon: &Option<Icon>,
     content: &str,
     options: Options,
@@ -127,7 +133,7 @@ fn content_block(
     let caption = match character {
         Some(Character {
             id: character_id,
-            name: character_name,
+            name: character_default_name,
             screenname,
         }) => {
             let screenname = screenname
@@ -135,7 +141,8 @@ fn content_block(
                 .map(|n| format!("({n})"))
                 .map(|n| transform::escape_html(&n))
                 .unwrap_or_default();
-            let character_name = transform::escape_html(character_name);
+            let character_name =
+                transform::escape_html(character_name.as_ref().unwrap_or(&character_default_name));
 
             match author {
                 Some(User {
