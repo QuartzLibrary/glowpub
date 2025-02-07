@@ -142,7 +142,7 @@ fn content_block(
                 .map(|n| transform::escape_html(&n))
                 .unwrap_or_default();
             let character_name =
-                transform::escape_html(character_name.as_ref().unwrap_or(&character_default_name));
+                transform::escape_html(character_name.as_ref().unwrap_or(character_default_name));
 
             match author {
                 Some(User {
