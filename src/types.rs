@@ -91,6 +91,8 @@ pub struct Icon {
 pub struct Reply {
     pub id: u64,
     pub character: Option<Character>,
+    /// The name being used for this character in this reply.
+    /// This will be an alias if one was used, or else the same as `self.character.name`.
     pub character_name: Option<String>,
     pub content: String,
     #[serde(with = "crate::rfc3339")]
