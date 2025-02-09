@@ -83,6 +83,10 @@ struct CliOptions {
     #[clap(long)]
     output_dir: Option<PathBuf>,
 
+    /// Specify the output directory layout.
+    #[clap(long, default_value_t = OutputDirLayout::default())]
+    output_dir_layout: OutputDirLayout,
+
     /// Determines which file-types are created by the program.
     #[clap(long, default_value_t = OutputFormat::default())]
     output_format: OutputFormat,
@@ -97,6 +101,23 @@ enum FlattenDetails {
     All,
     /// Only <details> tags in epubs will be flattened.
     Mixed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
+enum OutputDirLayout {
+    /// The default option. Output files will be placed in a nested subdirectory based on their board.
+    #[default]
+    Nested,
+    /// Output files will be placed directly in the output directory, and will have their board information included in the filename.
+    Flat,
+}
+impl Display for OutputDirLayout {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Nested => write!(f, "nested"),
+            Self::Flat => write!(f, "flat"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
@@ -144,6 +165,7 @@ async fn main() {
         jpeg,
         resize_icons,
         output_dir,
+        output_dir_layout,
         output_format,
     } = command.options();
 
@@ -207,6 +229,7 @@ async fn main() {
                     &thread,
                     &board,
                     board_posts.iter().map(|p| p.section.clone()),
+                    OutputDirLayout::Flat,
                 )
             };
 
@@ -245,6 +268,7 @@ async fn main() {
                     thread,
                     &continuity.board,
                     continuity.threads.iter().map(|t| t.post.section.clone()),
+                    output_dir_layout,
                 );
 
                 if output_format.html() {
@@ -304,6 +328,7 @@ fn thread_filename(
     thread: &Thread,
     board: &Board,
     board_thread_sections: impl Iterator<Item = Option<Section>>,
+    layout: OutputDirLayout,
 ) -> String {
     let board_folder = {
         let board_id = board.id;
@@ -336,7 +361,13 @@ fn thread_filename(
         format!("#{post_order} [{post_id}] {post_subject}")
     };
 
-    format!("{board_folder}{section_folder}{post_name}")
+    format!("{board_folder}{section_folder}{post_name}").replace(
+        '/',
+        match layout {
+            OutputDirLayout::Flat => " ",
+            OutputDirLayout::Nested => "/",
+        },
+    )
 }
 
 pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) {
