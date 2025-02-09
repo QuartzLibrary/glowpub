@@ -1,5 +1,8 @@
 use clap::Parser;
-use std::path::{Path, PathBuf};
+use std::{
+    fmt::Display,
+    path::{Path, PathBuf},
+};
 
 use glowpub::{
     api::BoardPosts,
@@ -76,8 +79,13 @@ struct CliOptions {
 
     /// Output files in this directory (e.g. `--output-dir=~/glowfic`).
     /// Note that this can flood the directory if used with `board` but without `--single-file`.
+    /// Files will be placed in format-specific subdirectories if `--output-format` is `both` (the default).
     #[clap(long)]
     output_dir: Option<PathBuf>,
+
+    /// Determines which file-types are created by the program.
+    #[clap(long, default_value_t = OutputFormat::default())]
+    output_format: OutputFormat,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
@@ -89,6 +97,30 @@ enum FlattenDetails {
     All,
     /// Only <details> tags in epubs will be flattened.
     Mixed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
+enum OutputFormat {
+    /// The default option. Both HTML and Epub files will be created.
+    /// Output files will be placed in "html" and "epub" subdirectories, respectively.
+    #[default]
+    Both,
+    /// Only Epub files will be created.
+    Epub,
+    /// Only HTML files will be created.
+    Html,
+    /// No output files will be created.
+    None,
+}
+impl Display for OutputFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Both => write!(f, "both"),
+            Self::Epub => write!(f, "epub"),
+            Self::Html => write!(f, "html"),
+            Self::None => write!(f, "none"),
+        }
+    }
 }
 
 #[tokio::main]
@@ -104,9 +136,19 @@ async fn main() {
         jpeg,
         resize_icons,
         output_dir,
+        output_format,
     } = command.options();
 
     let resize_icons = resize_icons.map(|r| r.unwrap_or(100));
+
+    let html_output_prefix;
+    let epub_output_prefix;
+    (html_output_prefix, epub_output_prefix) =
+        if matches!(output_format, OutputFormat::Both) || output_dir.is_none() {
+            ("html/", "epub/")
+        } else {
+            ("", "")
+        };
 
     let output_dir = output_dir.unwrap_or_else(|| PathBuf::from(DEFAULT_OUTPUT_DIR));
 
@@ -159,13 +201,23 @@ async fn main() {
                 )
             };
 
-            log::info!("Generating html document {name}...");
-            let path = output_dir.join(PathBuf::from(format!("html/{name}.html")));
-            write(path, thread.to_single_html_page(html_options));
+            if matches!(output_format, OutputFormat::Html)
+                || matches!(output_format, OutputFormat::Both)
+            {
+                log::info!("Generating html document {name}...");
+                let path =
+                    output_dir.join(PathBuf::from(format!("{html_output_prefix}{name}.html")));
+                write(path, thread.to_single_html_page(html_options));
+            }
 
-            log::info!("Generating epub document {name}...");
-            let path = output_dir.join(PathBuf::from(format!("epub/{name}.epub")));
-            write(path, thread.to_epub(epub_options).await.unwrap());
+            if matches!(output_format, OutputFormat::Epub)
+                || matches!(output_format, OutputFormat::Both)
+            {
+                log::info!("Generating epub document {name}...");
+                let path =
+                    output_dir.join(PathBuf::from(format!("{epub_output_prefix}{name}.epub")));
+                write(path, thread.to_epub(epub_options).await.unwrap());
+            }
         }
         Command::Board {
             board_id,
@@ -192,13 +244,23 @@ async fn main() {
                     continuity.threads.iter().map(|t| t.post.section.clone()),
                 );
 
-                log::info!("Generating html document {name}...");
-                let path = output_dir.join(PathBuf::from(format!("html/{name}.html")));
-                write(path, thread.to_single_html_page(html_options));
+                if matches!(output_format, OutputFormat::Html)
+                    || matches!(output_format, OutputFormat::Both)
+                {
+                    log::info!("Generating html document {name}...");
+                    let path =
+                        output_dir.join(PathBuf::from(format!("{html_output_prefix}{name}.html")));
+                    write(path, thread.to_single_html_page(html_options));
+                }
 
-                log::info!("Generating epub document {name}...");
-                let path = output_dir.join(PathBuf::from(format!("epub/{name}.epub")));
-                write(path, thread.to_epub(epub_options).await.unwrap());
+                if matches!(output_format, OutputFormat::Epub)
+                    || matches!(output_format, OutputFormat::Both)
+                {
+                    log::info!("Generating epub document {name}...");
+                    let path =
+                        output_dir.join(PathBuf::from(format!("{epub_output_prefix}{name}.epub")));
+                    write(path, thread.to_epub(epub_options).await.unwrap());
+                }
             }
         }
         Command::Board {
@@ -206,28 +268,39 @@ async fn main() {
             single_file: true,
             ..
         } => {
-            log::info!("Downloading board/continuity {board_id}...");
-            let continuity = Continuity::get_cached(board_id, !use_cache)
-                .await
-                .unwrap()
-                .unwrap();
-            log::info!(
-                "Downloaded continuity {board_id} - {}",
-                &continuity.board.name
-            );
+            if matches!(output_format, OutputFormat::Html)
+                || matches!(output_format, OutputFormat::Both)
+            {
+                log::warn!("HTML output is not supported in single-file mode.")
+            }
 
-            log::info!("Caching all the icons...");
-            continuity.cache_all_icons(false).await;
+            if !matches!(output_format, OutputFormat::Html) {
+                log::info!("Downloading board/continuity {board_id}...");
+                let continuity = Continuity::get_cached(board_id, !use_cache)
+                    .await
+                    .unwrap()
+                    .unwrap();
+                log::info!(
+                    "Downloaded continuity {board_id} - {}",
+                    &continuity.board.name
+                );
 
-            let name = {
-                let board_id = continuity.board.id;
-                let name = slug::slugify(&continuity.board.name);
-                format!("[{board_id}] {name}")
-            };
+                log::info!("Caching all the icons...");
+                continuity.cache_all_icons(false).await;
 
-            log::info!("Generating epub document {name}...");
-            let path = output_dir.join(PathBuf::from(format!("epub/{name}.epub")));
-            write(path, continuity.to_epub(epub_options).await.unwrap());
+                if !matches!(output_format, OutputFormat::None) {
+                    let name = {
+                        let board_id = continuity.board.id;
+                        let name = slug::slugify(&continuity.board.name);
+                        format!("[{board_id}] {name}")
+                    };
+
+                    log::info!("Generating epub document {name}...");
+                    let path =
+                        output_dir.join(PathBuf::from(format!("{epub_output_prefix}{name}.epub")));
+                    write(path, continuity.to_epub(epub_options).await.unwrap());
+                }
+            }
         }
     }
 
