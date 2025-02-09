@@ -1,5 +1,8 @@
 use clap::Parser;
-use std::path::{Path, PathBuf};
+use std::{
+    fmt::Display,
+    path::{Path, PathBuf},
+};
 
 use glowpub::{
     api::BoardPosts,
@@ -78,6 +81,10 @@ struct CliOptions {
     /// Note that this can flood the directory if used with `board` but without `--single-file`.
     #[clap(long)]
     output_dir: Option<PathBuf>,
+
+    /// Specify the output directory layout.
+    #[clap(long, default_value_t = OutputDirLayout::default())]
+    output_dir_layout: OutputDirLayout,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
@@ -89,6 +96,23 @@ enum FlattenDetails {
     All,
     /// Only <details> tags in epubs will be flattened.
     Mixed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
+enum OutputDirLayout {
+    /// The default option. Output files will be placed in a nested subdirectory based on their board.
+    #[default]
+    Nested,
+    /// Output files will be placed directly in the output directory, and will have their board information included in the filename.
+    Flat,
+}
+impl Display for OutputDirLayout {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Nested => write!(f, "nested"),
+            Self::Flat => write!(f, "flat"),
+        }
+    }
 }
 
 #[tokio::main]
@@ -104,6 +128,7 @@ async fn main() {
         jpeg,
         resize_icons,
         output_dir,
+        output_dir_layout,
     } = command.options();
 
     let resize_icons = resize_icons.map(|r| r.unwrap_or(100));
@@ -156,6 +181,7 @@ async fn main() {
                     &thread,
                     &board,
                     board_posts.iter().map(|p| p.section.clone()),
+                    matches!(output_dir_layout, OutputDirLayout::Flat),
                 )
             };
 
@@ -190,6 +216,7 @@ async fn main() {
                     thread,
                     &continuity.board,
                     continuity.threads.iter().map(|t| t.post.section.clone()),
+                    matches!(output_dir_layout, OutputDirLayout::Flat),
                 );
 
                 log::info!("Generating html document {name}...");
@@ -238,11 +265,14 @@ fn thread_filename(
     thread: &Thread,
     board: &Board,
     board_thread_sections: impl Iterator<Item = Option<Section>>,
+    flatten: bool,
 ) -> String {
+    let separator = if flatten { " " } else { "/" };
+
     let board_folder = {
         let board_id = board.id;
         let board_name = slug::slugify(&board.name);
-        format!("[{board_id}] {board_name}/")
+        format!("[{board_id}] {board_name}{separator}")
     };
 
     let section_folder = thread
@@ -252,7 +282,7 @@ fn thread_filename(
         .map(|Section { id, name, order }| {
             let width = Ord::max(board.board_sections.len().to_string().len(), 2);
             let name = slug::slugify(name);
-            format!("Section #{order:0width$} [{id}] {name}/")
+            format!("Section #{order:0width$} [{id}] {name}{separator}")
         })
         .unwrap_or_default();
 

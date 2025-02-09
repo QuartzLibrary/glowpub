@@ -44,6 +44,8 @@ cargo run -- board 215
   Valid values are `--flatten-details=none` (default), `--flatten-details=all`, `--flatten-details=mixed`. `mixed` flattens details in epubs only.
 - `--output-dir`: output files in this directory (e.g. `--output-dir=~/glowfic`).
   Note that this can flood the directory if used with `board` but without `--single-file`.
+- `--output-dir-layout`: whether or not to output files in nested directories based on their board and category.
+  Valid values are `--output-dir-layout=nested` (default) and `--output-dir-layout=flat`.
 - `--single-file`: if downloading a board/continuity, output the entire board in a single epub file.
 
 ---
