@@ -1,5 +1,8 @@
 use clap::Parser;
-use std::path::{Path, PathBuf};
+use std::{
+    fmt::Display,
+    path::{Path, PathBuf},
+};
 
 use glowpub::{
     api::BoardPosts,
@@ -76,8 +79,13 @@ struct CliOptions {
 
     /// Output files in this directory (e.g. `--output-dir=~/glowfic`).
     /// Note that this can flood the directory if used with `board` but without `--single-file`.
+    /// Files will be placed in format-specific subdirectories if this option is not set, or if `--output-format` is `both` (the default).
     #[clap(long)]
     output_dir: Option<PathBuf>,
+
+    /// Determines which file-types are created by the program.
+    #[clap(long, default_value_t = OutputFormat::default())]
+    output_format: OutputFormat,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
@@ -89,6 +97,38 @@ enum FlattenDetails {
     All,
     /// Only <details> tags in epubs will be flattened.
     Mixed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
+enum OutputFormat {
+    /// The default option. Both HTML and Epub files will be created.
+    /// Output files will be placed in "html" and "epub" subdirectories, respectively.
+    #[default]
+    Both,
+    /// Only Epub files will be created.
+    Epub,
+    /// Only HTML files will be created.
+    Html,
+    /// No output files will be created.
+    None,
+}
+impl OutputFormat {
+    fn epub(self) -> bool {
+        matches!(self, Self::Epub | Self::Both)
+    }
+    fn html(self) -> bool {
+        matches!(self, Self::Html | Self::Both)
+    }
+}
+impl Display for OutputFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Both => write!(f, "both"),
+            Self::Epub => write!(f, "epub"),
+            Self::Html => write!(f, "html"),
+            Self::None => write!(f, "none"),
+        }
+    }
 }
 
 #[tokio::main]
@@ -104,11 +144,22 @@ async fn main() {
         jpeg,
         resize_icons,
         output_dir,
+        output_format,
     } = command.options();
 
     let resize_icons = resize_icons.map(|r| r.unwrap_or(100));
 
-    let output_dir = output_dir.unwrap_or_else(|| PathBuf::from(DEFAULT_OUTPUT_DIR));
+    let mut html_output_dir = output_dir
+        .clone()
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_OUTPUT_DIR));
+    let mut epub_output_dir = output_dir
+        .clone()
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_OUTPUT_DIR));
+
+    if output_format == OutputFormat::Both || output_dir.is_none() {
+        html_output_dir = html_output_dir.join("html/");
+        epub_output_dir = epub_output_dir.join("epub/");
+    }
 
     let epub_options = Options {
         text_to_speech,
@@ -159,13 +210,17 @@ async fn main() {
                 )
             };
 
-            log::info!("Generating html document {name}...");
-            let path = output_dir.join(PathBuf::from(format!("html/{name}.html")));
-            write(path, thread.to_single_html_page(html_options));
+            if output_format.html() {
+                log::info!("Generating html document {name}...");
+                let path = html_output_dir.join(format!("{name}.html"));
+                write(path, thread.to_single_html_page(html_options));
+            }
 
-            log::info!("Generating epub document {name}...");
-            let path = output_dir.join(PathBuf::from(format!("epub/{name}.epub")));
-            write(path, thread.to_epub(epub_options).await.unwrap());
+            if output_format.epub() {
+                log::info!("Generating epub document {name}...");
+                let path = epub_output_dir.join(format!("{name}.epub"));
+                write(path, thread.to_epub(epub_options).await.unwrap());
+            }
         }
         Command::Board {
             board_id,
@@ -192,13 +247,17 @@ async fn main() {
                     continuity.threads.iter().map(|t| t.post.section.clone()),
                 );
 
-                log::info!("Generating html document {name}...");
-                let path = output_dir.join(PathBuf::from(format!("html/{name}.html")));
-                write(path, thread.to_single_html_page(html_options));
+                if output_format.html() {
+                    log::info!("Generating html document {name}...");
+                    let path = html_output_dir.join(format!("{name}.html"));
+                    write(path, thread.to_single_html_page(html_options));
+                }
 
-                log::info!("Generating epub document {name}...");
-                let path = output_dir.join(PathBuf::from(format!("epub/{name}.epub")));
-                write(path, thread.to_epub(epub_options).await.unwrap());
+                if output_format.epub() {
+                    log::info!("Generating epub document {name}...");
+                    let path = epub_output_dir.join(format!("{name}.epub"));
+                    write(path, thread.to_epub(epub_options).await.unwrap());
+                }
             }
         }
         Command::Board {
@@ -206,6 +265,13 @@ async fn main() {
             single_file: true,
             ..
         } => {
+            if output_format.html() {
+                log::warn!("HTML output is not supported in single-file mode.");
+                if output_format == OutputFormat::Html {
+                    return;
+                }
+            }
+
             log::info!("Downloading board/continuity {board_id}...");
             let continuity = Continuity::get_cached(board_id, !use_cache)
                 .await
@@ -226,7 +292,7 @@ async fn main() {
             };
 
             log::info!("Generating epub document {name}...");
-            let path = output_dir.join(PathBuf::from(format!("epub/{name}.epub")));
+            let path = epub_output_dir.join(format!("{name}.epub"));
             write(path, continuity.to_epub(epub_options).await.unwrap());
         }
     }
