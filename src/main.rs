@@ -54,6 +54,10 @@ struct CliOptions {
     #[clap(long)]
     use_cache: bool,
 
+    /// Don't reuse data for individual posts, but still otherwise use the cache according to use_cache option.
+    #[clap(long)]
+    invalidate_post_cache: bool,
+
     /// Simplify character and user names to improve text-to-speech output.
     #[clap(long)]
     text_to_speech: bool,
@@ -160,6 +164,7 @@ async fn main() {
 
     let CliOptions {
         use_cache,
+        invalidate_post_cache,
         text_to_speech,
         flatten_details,
         jpeg,
@@ -205,7 +210,7 @@ async fn main() {
     match command {
         Command::Post { post_id, .. } => {
             log::info!("Downloading post {post_id}");
-            let thread = Thread::get_cached(post_id, !use_cache)
+            let thread = Thread::get_cached(post_id, !use_cache || invalidate_post_cache)
                 .await
                 .unwrap()
                 .unwrap();
@@ -251,7 +256,7 @@ async fn main() {
             ..
         } => {
             log::info!("Downloading board/continuity {board_id}...");
-            let continuity = Continuity::get_cached(board_id, !use_cache)
+            let continuity = Continuity::get_cached(board_id, !use_cache, invalidate_post_cache)
                 .await
                 .unwrap()
                 .unwrap();
@@ -297,7 +302,7 @@ async fn main() {
             }
 
             log::info!("Downloading board/continuity {board_id}...");
-            let continuity = Continuity::get_cached(board_id, !use_cache)
+            let continuity = Continuity::get_cached(board_id, !use_cache, invalidate_post_cache)
                 .await
                 .unwrap()
                 .unwrap();

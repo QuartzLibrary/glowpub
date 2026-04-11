@@ -182,6 +182,7 @@ impl Continuity {
     pub async fn get_cached(
         id: u64,
         invalidate_cache: bool,
+        invalidate_post_cache: bool,
     ) -> Result<Result<Self, Vec<GlowficError>>, Box<dyn Error>> {
         let board = match Board::get_cached(id, invalidate_cache).await? {
             Ok(board) => board,
@@ -192,10 +193,13 @@ impl Continuity {
                 let mut threads = vec![];
                 for p in board_posts {
                     log::info!("Downloading post {} - {}", p.id, &p.subject);
-                    let thread = match Thread::get_cached(p.id, invalidate_cache).await? {
-                        Ok(thread) => thread,
-                        Err(e) => return Ok(Err(e)),
-                    };
+                    let thread =
+                        match Thread::get_cached(p.id, invalidate_cache || invalidate_post_cache)
+                            .await?
+                        {
+                            Ok(thread) => thread,
+                            Err(e) => return Ok(Err(e)),
+                        };
                     threads.push(thread);
                 }
                 threads
