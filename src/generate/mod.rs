@@ -15,12 +15,71 @@ use super::Thread;
 
 const STYLE: &str = include_str!("book.css");
 
+const MD_OPTIONS: markdown::Options = markdown::Options {
+    parse: markdown::ParseOptions {
+        constructs: markdown::Constructs {
+            attention: true,
+            autolink: true,
+            block_quote: true,
+            character_escape: true,
+            character_reference: true,
+            code_indented: false,
+            code_fenced: true,
+            code_text: true,
+            definition: false,
+            frontmatter: false,
+            gfm_autolink_literal: true,
+            gfm_footnote_definition: false,
+            gfm_label_start_footnote: false,
+            gfm_strikethrough: true,
+            gfm_table: true,
+            gfm_task_list_item: false,
+            hard_break_escape: false,
+            hard_break_trailing: true,
+            heading_atx: true,
+            heading_setext: true,
+            html_flow: true,
+            html_text: true,
+            label_start_image: true,
+            label_start_link: true,
+            label_end: true,
+            list_item: true,
+            math_flow: false,
+            math_text: false,
+            mdx_esm: false,
+            mdx_expression_flow: false,
+            mdx_expression_text: false,
+            mdx_jsx_flow: false,
+            mdx_jsx_text: false,
+            thematic_break: true,
+        },
+        gfm_strikethrough_single_tilde: false,
+        math_text_single_dollar: false,
+        mdx_expression_parse: None,
+        mdx_esm_parse: None,
+    },
+    compile: markdown::CompileOptions {
+        allow_any_img_src: true,
+        allow_dangerous_html: true,
+        allow_dangerous_protocol: false,
+        default_line_ending: markdown::LineEnding::LineFeed,
+        gfm_footnote_back_label: None,
+        gfm_footnote_clobber_prefix: None,
+        gfm_footnote_label_attributes: None,
+        gfm_footnote_label_tag_name: None,
+        gfm_footnote_label: None,
+        gfm_task_list_item_checkable: false,
+        gfm_tagfilter: true,
+    },
+};
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Options {
     pub text_to_speech: bool,
     pub flatten_details: bool,
     pub jpeg: bool,
     pub resize_icons: Option<u32>,
+    pub simple_markdown_detection: bool,
 }
 
 fn raw_title_page(post: &Post, reply_count: usize) -> String {
@@ -215,7 +274,22 @@ fn content_block(
     let reply_id = reply_id
         .map(|id| format!(r##" reply-id="{id}""##))
         .unwrap_or_default();
+    if options.simple_markdown_detection && !content.starts_with("<p>") {
+        let markdownified_content = markdown::to_html_with_options(content, &MD_OPTIONS).unwrap();
+        return format!(
+            r##"
 
+        <div class="content-block"{reply_id}>
+            <div class="character">
+                {image}
+                {caption}
+            </div>
+            {markdownified_content}
+        </div>
+
+        "##
+        );
+    }
     format!(
         r##"
 

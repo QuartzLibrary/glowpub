@@ -54,6 +54,10 @@ struct CliOptions {
     #[clap(long)]
     use_cache: bool,
 
+    /// Don't reuse data for individual posts, but still otherwise use the cache according to use_cache option.
+    #[clap(long)]
+    invalidate_post_cache: bool,
+
     /// Simplify character and user names to improve text-to-speech output.
     #[clap(long)]
     text_to_speech: bool,
@@ -70,6 +74,10 @@ struct CliOptions {
     /// (Does not affect SVGs.)
     #[clap(long)]
     jpeg: bool,
+
+    /// Uses a very simple detection-method to check for posts and replies written in Markdown.
+    #[clap(long)]
+    simple_markdown_detection: bool,
 
     /// When inlining icons into the epub file, this will scale all icon images above the provided width down to that width.
     /// Defaults to "100" if no value is provided.
@@ -160,9 +168,11 @@ async fn main() {
 
     let CliOptions {
         use_cache,
+        invalidate_post_cache,
         text_to_speech,
         flatten_details,
         jpeg,
+        simple_markdown_detection,
         resize_icons,
         output_dir,
         output_dir_layout,
@@ -191,6 +201,7 @@ async fn main() {
         },
         jpeg,
         resize_icons,
+        simple_markdown_detection,
     };
     let html_options = Options {
         text_to_speech,
@@ -200,12 +211,13 @@ async fn main() {
         },
         jpeg,
         resize_icons,
+        simple_markdown_detection,
     };
 
     match command {
         Command::Post { post_id, .. } => {
             log::info!("Downloading post {post_id}");
-            let thread = Thread::get_cached(post_id, !use_cache)
+            let thread = Thread::get_cached(post_id, !use_cache || invalidate_post_cache)
                 .await
                 .unwrap()
                 .unwrap();
@@ -251,7 +263,7 @@ async fn main() {
             ..
         } => {
             log::info!("Downloading board/continuity {board_id}...");
-            let continuity = Continuity::get_cached(board_id, !use_cache)
+            let continuity = Continuity::get_cached(board_id, !use_cache, invalidate_post_cache)
                 .await
                 .unwrap()
                 .unwrap();
@@ -297,7 +309,7 @@ async fn main() {
             }
 
             log::info!("Downloading board/continuity {board_id}...");
-            let continuity = Continuity::get_cached(board_id, !use_cache)
+            let continuity = Continuity::get_cached(board_id, !use_cache, invalidate_post_cache)
                 .await
                 .unwrap()
                 .unwrap();
