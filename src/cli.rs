@@ -152,8 +152,7 @@ impl Display for OutputFormat {
     }
 }
 
-#[tokio::main]
-async fn main() {
+pub async fn main() {
     simple_logger::init_with_level(log::Level::Info).unwrap();
 
     let command = Command::parse();

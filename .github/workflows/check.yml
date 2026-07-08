@@ -31,15 +31,17 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
 
-      # - name: Install WASM toolchain
-      #   run: rustup target add wasm32-unknown-unknown
+      - name: Install WASM toolchain
+        run: rustup target add wasm32-unknown-unknown
 
       - name: Check project
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-      # - name: Check project (WASM)
-      #   # Note lack of --all-targets here because tests and examples are not wasm compatible
-      #   run: cargo clippy --workspace --all-features --target wasm32-unknown-unknown -- -D warnings
+      - name: Check project (WASM)
+        # Note lack of --all-targets here because tests and examples are not wasm compatible
+        # (the CLI binary compiles as an empty stub). getrandom 0.3 requires selecting its
+        # JS backend explicitly on wasm32-unknown-unknown.
+        run: RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo clippy --workspace --all-features --target wasm32-unknown-unknown -- -D warnings
 
   test:
     runs-on: ubuntu-latest
