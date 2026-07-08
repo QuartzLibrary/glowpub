@@ -57,14 +57,13 @@ impl Replies {
     ) -> Result<Result<Vec<Reply>, Vec<GlowficError>>, Box<dyn Error>> {
         let cache_path = Self::cache_key(id);
 
-        if !invalidate_cache {
-            if let Ok(data) = std::fs::read(&cache_path) {
-                let parsed: Result<Self, Vec<GlowficError>> =
-                    serde_json::from_slice(&data).unwrap();
+        if !invalidate_cache
+            && let Ok(data) = std::fs::read(&cache_path)
+        {
+            let parsed: Result<Self, Vec<GlowficError>> = serde_json::from_slice(&data).unwrap();
 
-                if let Ok(replies) = parsed {
-                    return Ok(Ok(replies.0));
-                }
+            if let Ok(replies) = parsed {
+                return Ok(Ok(replies.0));
             }
         }
 
@@ -88,14 +87,14 @@ impl BoardPosts {
     ) -> Result<Result<Vec<PostInBoard>, Vec<GlowficError>>, Box<dyn Error>> {
         let cache_path = Self::cache_key(id);
 
-        if !invalidate_cache {
-            if let Ok(data) = std::fs::read(&cache_path) {
-                let parsed: Result<Vec<PostInBoard>, Vec<GlowficError>> =
-                    serde_json::from_slice(&data).unwrap();
+        if !invalidate_cache
+            && let Ok(data) = std::fs::read(&cache_path)
+        {
+            let parsed: Result<Vec<PostInBoard>, Vec<GlowficError>> =
+                serde_json::from_slice(&data).unwrap();
 
-                if let Ok(posts) = parsed {
-                    return Ok(Ok(posts));
-                }
+            if let Ok(posts) = parsed {
+                return Ok(Ok(posts));
             }
         }
 
@@ -124,10 +123,10 @@ impl Icon {
             return Err("No url provided for this icon".into());
         };
 
-        if !invalidate_cache {
-            if let Ok((mime, data)) = read_image_file(Self::cache_key(*id, "*")) {
-                return Ok((mime, data));
-            }
+        if !invalidate_cache
+            && let Ok((mime, data)) = read_image_file(Self::cache_key(*id, "*"))
+        {
+            return Ok((mime, data));
         }
 
         log::info!("Downloading icon {id} from {url}");
@@ -232,10 +231,10 @@ pub async fn download_cached_image(
 
     let hash = url_hash(url);
 
-    if !invalidate_cache {
-        if let Ok((mime, data)) = read_image_file(image_cache_key(&hash, "*")) {
-            return Ok((mime, data));
-        }
+    if !invalidate_cache
+        && let Ok((mime, data)) = read_image_file(image_cache_key(&hash, "*"))
+    {
+        return Ok((mime, data));
     }
 
     log::info!("Downloading image {hash} from {url}");
@@ -261,12 +260,12 @@ async fn get_cached_glowfic<T>(
 where
     T: DeserializeOwned + Serialize,
 {
-    if !invalidate_cache {
-        if let Ok(data) = std::fs::read(cache_path) {
-            let parsed: Result<T, Vec<GlowficError>> = serde_json::from_slice(&data).unwrap();
-            if parsed.is_ok() {
-                return Ok(parsed);
-            }
+    if !invalidate_cache
+        && let Ok(data) = std::fs::read(cache_path)
+    {
+        let parsed: Result<T, Vec<GlowficError>> = serde_json::from_slice(&data).unwrap();
+        if parsed.is_ok() {
+            return Ok(parsed);
         }
     }
     let response = crate::api::get_glowfic(url).await?;
