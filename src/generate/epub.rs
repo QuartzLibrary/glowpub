@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::{
     Board, Post, Reply, Thread,
+    intern_images::InternedImage,
     types::{Continuity, Section, User},
 };
 
@@ -18,9 +19,20 @@ use super::{
 };
 
 impl Continuity {
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut images_to_intern = self.images_to_intern().await?;
+        let images_to_intern = self.images_to_intern().await?;
+        self.to_epub_from_images(options, images_to_intern)
+    }
 
+    /// Like [Self::to_epub], but with the images provided by the caller
+    /// instead of downloaded here. Available on wasm32, where the caller is
+    /// responsible for fetching the images (e.g. via JS `fetch`).
+    pub fn to_epub_from_images(
+        &self,
+        options: Options,
+        mut images_to_intern: HashMap<String, InternedImage>,
+    ) -> Result<Vec<u8>, Box<dyn Error>> {
         if let Some(size) = options.resize_icons {
             images_to_intern = images_to_intern
                 .into_iter()
@@ -382,9 +394,20 @@ impl Thread {
 }
 
 impl Thread {
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut images_to_intern = self.images_to_intern().await?;
+        let images_to_intern = self.images_to_intern().await?;
+        self.to_epub_from_images(options, images_to_intern)
+    }
 
+    /// Like [Self::to_epub], but with the images provided by the caller
+    /// instead of downloaded here. Available on wasm32, where the caller is
+    /// responsible for fetching the images (e.g. via JS `fetch`).
+    pub fn to_epub_from_images(
+        &self,
+        options: Options,
+        mut images_to_intern: HashMap<String, InternedImage>,
+    ) -> Result<Vec<u8>, Box<dyn Error>> {
         if let Some(size) = options.resize_icons {
             images_to_intern = images_to_intern
                 .into_iter()

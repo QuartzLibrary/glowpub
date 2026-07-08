@@ -1,17 +1,15 @@
-use std::{
-    collections::{HashMap, HashSet},
-    error::Error,
-    io::Cursor,
-};
+#[cfg(not(target_arch = "wasm32"))]
+use std::collections::{HashMap, HashSet};
+use std::{error::Error, io::Cursor};
 
 use image::imageops::FilterType;
 use mime::Mime;
 
-use crate::{
-    cached::download_cached_image,
-    types::{Continuity, Icon, Thread},
-    utils::{mime_to_image_extension, url_hash},
-};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::cached::download_cached_image;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::types::{Continuity, Icon, Thread};
+use crate::utils::{mime_to_image_extension, url_hash};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InternedImage {
@@ -142,6 +140,7 @@ impl InternedImage {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Continuity {
     pub async fn images_to_intern(&self) -> Result<HashMap<String, InternedImage>, Box<dyn Error>> {
         let mut interned_images: HashMap<String, InternedImage> = HashMap::new();
@@ -161,6 +160,7 @@ impl Continuity {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Thread {
     pub async fn images_to_intern(&self) -> Result<HashMap<String, InternedImage>, Box<dyn Error>> {
         let mut interned_images: HashMap<String, InternedImage> = HashMap::new();
@@ -242,6 +242,7 @@ impl Thread {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Icon {
     async fn intern(&self) -> Result<InternedImage, Box<dyn Error>> {
         let (mime, data) = self.download_cached(false).await?;

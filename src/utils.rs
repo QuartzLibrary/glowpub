@@ -1,4 +1,6 @@
-use std::{io::Cursor, str::FromStr, sync::OnceLock};
+use std::{io::Cursor, str::FromStr};
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::OnceLock;
 
 use image::ImageReader;
 use mime::Mime;
@@ -6,6 +8,7 @@ use sha2::{Digest, Sha256};
 
 use crate::types::{Icon, Thread};
 
+#[cfg(not(target_arch = "wasm32"))]
 const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 impl Thread {
@@ -59,6 +62,7 @@ pub fn url_hash(url: &str) -> String {
     format!("{hash:x}")
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn http_client() -> reqwest::Client {
     // TODO: use global `std::sync::LazyLock` once stable.
     pub static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();

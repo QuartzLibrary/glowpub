@@ -10,7 +10,6 @@ edition = "2024"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
-glob = "0.3"
 log = "0.4"
 mime = "0.3"
 rand = "0.8"
@@ -18,10 +17,8 @@ regex = "1"
 sha2 = "0.10"
 uuid = { version = "1", features = ["v4"] }
 
-reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["full"] }
 
 fontdb = "0.16"
 resvg = "0.41"
@@ -43,7 +40,22 @@ xml5ever = "0.18"
 
 image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "webp"] }
 
+slug = "0.1"
+
+# Native-only dependencies: networking, async runtime, filesystem cache, and the CLI.
+# The library builds for wasm32 without them (see src/lib.rs cfg gates); the
+# `Thread::to_epub_remote_images` path is fully available on wasm.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+glob = "0.3"
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
 clap = { version = "4", features = ["derive"] }
 simple_logger = "4"
-slug = "0.1"
 rpassword = "7.3.1"
+
+# On wasm32-unknown-unknown, getrandom needs its JS backends enabled
+# (pulled in transitively via `rand` and `uuid`).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom02 = { package = "getrandom", version = "0.2", features = ["js"] }
+getrandom03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
+uuid = { version = "1", features = ["js"] }
