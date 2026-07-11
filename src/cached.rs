@@ -275,8 +275,16 @@ where
 pub async fn download_image(url: &str) -> Result<(Mime, Vec<u8>), reqwest::Error> {
     let response = http_client().get(url).send().await?;
 
-    let content_type = response.headers().get(CONTENT_TYPE).unwrap();
-    let mime = Mime::from_str(content_type.to_str().unwrap()).unwrap();
+    let headers = response.headers();
+    let mime = headers
+        .get(CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| Mime::from_str(s).ok())
+        .or_else(|| {
+            utile::io::get_filename_from_headers(headers)
+                .and_then(|filename| extension_to_image_mime(filename.split('.').next_back()?))
+        })
+        .unwrap_or(mime::APPLICATION_OCTET_STREAM);
 
     let data = response.bytes().await?;
 
