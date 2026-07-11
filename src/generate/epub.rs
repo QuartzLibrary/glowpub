@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::{
     Board, Post, Reply, Thread,
+    intern_images::InternedImage,
     types::{Continuity, Section, User},
 };
 
@@ -19,8 +20,15 @@ use super::{
 
 impl Continuity {
     pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut images_to_intern = self.images_to_intern().await?;
+        let images_to_intern = self.images_to_intern().await?;
+        self.to_epub_from_images(options, images_to_intern)
+    }
 
+    pub fn to_epub_from_images(
+        &self,
+        options: Options,
+        mut images_to_intern: HashMap<String, InternedImage>,
+    ) -> Result<Vec<u8>, Box<dyn Error>> {
         if let Some(size) = options.resize_icons {
             images_to_intern = images_to_intern
                 .into_iter()
@@ -383,8 +391,15 @@ impl Thread {
 
 impl Thread {
     pub async fn to_epub(&self, options: Options) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut images_to_intern = self.images_to_intern().await?;
+        let images_to_intern = self.images_to_intern().await?;
+        self.to_epub_from_images(options, images_to_intern)
+    }
 
+    pub fn to_epub_from_images(
+        &self,
+        options: Options,
+        mut images_to_intern: HashMap<String, InternedImage>,
+    ) -> Result<Vec<u8>, Box<dyn Error>> {
         if let Some(size) = options.resize_icons {
             images_to_intern = images_to_intern
                 .into_iter()
