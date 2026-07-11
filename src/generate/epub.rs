@@ -484,7 +484,7 @@ impl Thread {
         for (i, reply_page) in self.reply_pages(options, url_map).iter().enumerate() {
             builder.add_content(
                 EpubContent::new(format!("part_{i}.xhtml"), reply_page.as_bytes())
-                    .title(format!("Part {i}"))
+                    // .title(format!("Part {i}"))
                     .reftype(ReferenceType::Text)
                     .level(1),
             )?;
