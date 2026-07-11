@@ -70,8 +70,7 @@ impl Replies {
 
         let response = Self::get_all(id).await?;
 
-        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        write_if_changed(&cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+        cache_store(&cache_path, serde_json::to_vec_pretty(&response).unwrap());
 
         Ok(response)
     }
@@ -101,8 +100,7 @@ impl BoardPosts {
 
         let response = Self::get_all(id).await?;
 
-        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        write_if_changed(&cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+        cache_store(&cache_path, serde_json::to_vec_pretty(&response).unwrap());
 
         Ok(response)
     }
@@ -139,8 +137,7 @@ impl Icon {
         let extension = mime_to_image_extension(&mime).ok_or(format!("Invalid mime: {mime}"))?;
 
         let cache_path = Self::cache_key(*id, &extension);
-        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        write_if_changed(cache_path, &data).unwrap();
+        cache_store(cache_path, &data);
 
         Ok((mime, data))
     }
@@ -247,8 +244,7 @@ pub async fn download_cached_image(
     let extension = mime_to_image_extension(&mime).ok_or(format!("Invalid mime: {mime}"))?;
 
     let cache_path = image_cache_key(&hash, &extension);
-    std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-    write_if_changed(cache_path, &data).unwrap();
+    cache_store(cache_path, &data);
 
     Ok((mime, data))
 }
@@ -271,8 +267,7 @@ where
     }
     let response = crate::api::get_glowfic(url).await?;
 
-    std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-    write_if_changed(cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+    cache_store(cache_path, serde_json::to_vec_pretty(&response).unwrap());
 
     Ok(response)
 }
@@ -321,6 +316,16 @@ fn read_image_file(path: PathBuf) -> Result<(Mime, Vec<u8>), Box<dyn Error>> {
 
         _ => Err("Did not find a match for image in the cache.")?,
     }
+}
+
+fn cache_store(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) {
+    if cfg!(target_arch = "wasm32") {
+        // TODO: Implement cache storage for wasm32?
+        return;
+    }
+    let path = path.as_ref();
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    write_if_changed(path, contents).unwrap();
 }
 
 /// Avoids updating the last-modified date of the file.
