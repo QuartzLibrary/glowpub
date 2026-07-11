@@ -76,7 +76,7 @@ impl Replies {
                 Err(errors) => return Ok(Err(errors)),
             }
 
-            tokio::time::sleep(Duration::from_millis(100)).await;
+            utile::time::sleep(Duration::from_millis(100)).await;
         }
 
         Ok(Ok(replies))
@@ -137,7 +137,7 @@ impl BoardPosts {
                 Err(errors) => return Ok(Err(errors)),
             }
 
-            tokio::time::sleep(Duration::from_millis(100)).await;
+            utile::time::sleep(Duration::from_millis(100)).await;
         }
 
         Ok(Ok(posts))
@@ -240,7 +240,7 @@ where
                 if delay > Duration::from_secs(1) || i + 1 == retries {
                     log::info!("Api error, retrying in {delay:?}. {e:?}");
                 }
-                tokio::time::sleep(delay).await;
+                utile::time::sleep(delay).await;
             }
         }
     }

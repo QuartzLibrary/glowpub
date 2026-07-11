@@ -70,8 +70,7 @@ impl Replies {
 
         let response = Self::get_all(id).await?;
 
-        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        write_if_changed(&cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+        cache_store(&cache_path, serde_json::to_vec_pretty(&response).unwrap());
 
         Ok(response)
     }
@@ -101,8 +100,7 @@ impl BoardPosts {
 
         let response = Self::get_all(id).await?;
 
-        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        write_if_changed(&cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+        cache_store(&cache_path, serde_json::to_vec_pretty(&response).unwrap());
 
         Ok(response)
     }
@@ -139,8 +137,7 @@ impl Icon {
         let extension = mime_to_image_extension(&mime).ok_or(format!("Invalid mime: {mime}"))?;
 
         let cache_path = Self::cache_key(*id, &extension);
-        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        write_if_changed(cache_path, &data).unwrap();
+        cache_store(cache_path, &data);
 
         Ok((mime, data))
     }
@@ -247,8 +244,7 @@ pub async fn download_cached_image(
     let extension = mime_to_image_extension(&mime).ok_or(format!("Invalid mime: {mime}"))?;
 
     let cache_path = image_cache_key(&hash, &extension);
-    std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-    write_if_changed(cache_path, &data).unwrap();
+    cache_store(cache_path, &data);
 
     Ok((mime, data))
 }
@@ -271,8 +267,7 @@ where
     }
     let response = crate::api::get_glowfic(url).await?;
 
-    std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-    write_if_changed(cache_path, serde_json::to_vec_pretty(&response).unwrap()).unwrap();
+    cache_store(cache_path, serde_json::to_vec_pretty(&response).unwrap());
 
     Ok(response)
 }
@@ -280,8 +275,16 @@ where
 pub async fn download_image(url: &str) -> Result<(Mime, Vec<u8>), reqwest::Error> {
     let response = http_client().get(url).send().await?;
 
-    let content_type = response.headers().get(CONTENT_TYPE).unwrap();
-    let mime = Mime::from_str(content_type.to_str().unwrap()).unwrap();
+    let headers = response.headers();
+    let mime = headers
+        .get(CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| Mime::from_str(s).ok())
+        .or_else(|| {
+            utile::io::get_filename_from_headers(headers)
+                .and_then(|filename| extension_to_image_mime(filename.split('.').next_back()?))
+        })
+        .unwrap_or(mime::APPLICATION_OCTET_STREAM);
 
     let data = response.bytes().await?;
 
@@ -321,6 +324,16 @@ fn read_image_file(path: PathBuf) -> Result<(Mime, Vec<u8>), Box<dyn Error>> {
 
         _ => Err("Did not find a match for image in the cache.")?,
     }
+}
+
+fn cache_store(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) {
+    if cfg!(target_arch = "wasm32") {
+        // TODO: Implement cache storage for wasm32?
+        return;
+    }
+    let path = path.as_ref();
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    write_if_changed(path, contents).unwrap();
 }
 
 /// Avoids updating the last-modified date of the file.

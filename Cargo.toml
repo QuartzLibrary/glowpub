@@ -16,12 +16,12 @@ mime = "0.3"
 rand = "0.8"
 regex = "1"
 sha2 = "0.10"
+utile = "0.1"
 uuid = { version = "1", features = ["v4"] }
 
 reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["full"] }
 
 fontdb = "0.16"
 resvg = "0.41"
@@ -47,3 +47,15 @@ clap = { version = "4", features = ["derive"] }
 simple_logger = "4"
 slug = "0.1"
 rpassword = "7.3.1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+_getrandom4 = { version = "0.4", features = ["wasm_js"], package = "getrandom" }
+_getrandom3 = { version = "0.3", features = ["wasm_js"], package = "getrandom" }
+_getrandom2 = { version = "0.2", features = ["js"], package = "getrandom" }
+uuid = { version = "1", features = ["rng-getrandom"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
